@@ -1,0 +1,13 @@
+# Dépendances (le dossier node_modules est très lourd)
+node_modules/
+
+# Dossiers de build (générés par electron-builder)
+dist/
+games/
+
+# Fichiers sensibles (si tu y stockes des clés API, ce qui est déconseillé)
+.env
+play.js
+test.js
+getSrc.js
+data.json
