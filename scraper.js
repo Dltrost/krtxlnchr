@@ -1,12 +1,11 @@
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
-const { app } = require('electron'); // 👈 Ajout d'Electron pour les chemins
+const { app } = require('electron'); 
 
-// 👈 CORRECTION : On pointe vers AppData/Roaming/ton-app/games.json
 const userDataPath = app.getPath('userData');
 const JSON_FILE = path.join(userDataPath, 'games.json');
-const CONCURRENCY_LIMIT = 8; 
+const CONCURRENCY_LIMIT = 4; 
 
 function formatKey(text) {
     return text
@@ -31,7 +30,6 @@ function loadBackupData() {
 }
 
 async function scrapeSinglePage(gotScraping, pageNumber) {
-    // ... (Ton code scrapeSinglePage reste EXACTEMENT le même, il est parfait) ...
     const url = pageNumber === 1 
         ? 'https://steamrip.com/top-games/' 
         : `https://steamrip.com/top-games/page/${pageNumber}/`;
@@ -43,6 +41,20 @@ async function scrapeSinglePage(gotScraping, pageNumber) {
         const $ = cheerio.load(response.body);
         const gameElements = $('.post-item');
         if (gameElements.length === 0) return null;
+
+        // 👈 CORRECTION : Extraction dynamique du nombre total de pages via ton élément "Last"
+        let totalPages = null;
+        if (pageNumber === 1) {
+            const lastPageHref = $('a.pages-nav-item[title="Last"]').attr('href');
+            if (lastPageHref) {
+                // Recherche les chiffres présents après "page/"
+                const match = lastPageHref.match(/page\/(\d+)/);
+                if (match) {
+                    totalPages = parseInt(match[1], 10);
+                    console.log(`📊 Nombre total de pages détecté sur le site : ${totalPages}`);
+                }
+            }
+        }
 
         const results = [];
         gameElements.each((index, element) => {
@@ -70,27 +82,29 @@ async function scrapeSinglePage(gotScraping, pageNumber) {
 
             results.push({ gameName, gameUrl, imageLink: imageLink || "Pas d'image" });
         });
-        return results;
+
+        return { results, totalPages };
     } catch (error) {
+        console.error(`Erreur sur la page ${pageNumber}:`, error.message);
         return null;
     }
 }
 
-async function startScraping() {
+async function startScraping(onGameAdded, onProgressUpdate) {
     try {
         const { gotScraping } = await import('got-scraping');
         let bdd = loadBackupData();
         let startPage = 1;
         let keepScraping = true;
+        let totalPages = 170; // Valeur de repli si la détection échouait
 
-        console.log("🚀 Lancement du scraping ultra-rapide par vagues...");
+        console.log("🚀 Lancement du scraping...");
 
         while (keepScraping) {
             const pageGroup = Array.from({ length: CONCURRENCY_LIMIT }, (_, i) => startPage + i);
-            console.log(`\n📦 Envoi de la vague pour les pages : ${pageGroup.join(', ')}`);
-
+            
             const groupResults = await Promise.all(
-                pageGroup.map(p => scrapeSinglePage(gotScraping, p))
+                pageGroup.map(p => scrapeSinglePage(gotScraping, p).catch(() => null))
             );
 
             let localAddedCount = 0;
@@ -101,29 +115,45 @@ async function startScraping() {
                 const currentPageNum = pageGroup[i];
 
                 if (!pageData) {
-                    console.log(`ℹ️ La page ${currentPageNum} est vide ou inexistante (Fin du catalogue détectée).`);
                     hitEnd = true;
                     continue; 
                 }
 
-                pageData.forEach(game => {
+                // Met à jour le total de pages si trouvé sur la page 1
+                if (pageData.totalPages) {
+                    totalPages = pageData.totalPages;
+                }
+
+                pageData.results.forEach(game => {
                     const gameKey = formatKey(game.gameName);
                     if (!bdd[gameKey]) {
-                        bdd[gameKey] = {
+                        const newGame = {
                             gameName: game.gameName,
                             url: game.gameUrl,
                             imageLink: game.imageLink
                         };
+                        bdd[gameKey] = newGame;
                         localAddedCount++;
+
+                        if (typeof onGameAdded === 'function') {
+                            onGameAdded({ key: gameKey, data: newGame });
+                        }
                     }
                 });
             }
 
-            console.log(`✨ Vague terminée : ${localAddedCount} nouveaux jeux ajoutés.`);
-
             if (localAddedCount > 0) {
                 fs.writeFileSync(JSON_FILE, JSON.stringify(bdd, null, 4), 'utf-8');
-                console.log("💾 games.json mis à jour.");
+            }
+
+            // Calcul du pourcentage basé sur la dernière page de la vague actuelle
+            const lastPageProcessed = startPage + CONCURRENCY_LIMIT - 1;
+            let percent = Math.min(Math.round((lastPageProcessed / totalPages) * 100), 100);
+            
+            if (hitEnd) percent = 100;
+
+            if (typeof onProgressUpdate === 'function') {
+                onProgressUpdate(percent);
             }
 
             if (hitEnd) {
@@ -135,14 +165,11 @@ async function startScraping() {
             await new Promise(resolve => setTimeout(resolve, 1200));
         }
 
-        console.log("\n🎯 Scraping terminé à vitesse maximale ! Tout est dans games.json");
-        return { success: true, message: "Scraping terminé avec succès." }; // 👈 Retourne un statut
-
+        return { success: true };
     } catch (error) {
-        console.error("Erreur critique générale :", error.message);
+        console.error("Erreur critique dans startScraping :", error.message);
         return { success: false, error: error.message };
     }
 }
 
-// 👈 L'ASTUCE MAGIQUE : On exporte la fonction au lieu de l'exécuter tout de suite !
 module.exports = { startScraping };

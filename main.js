@@ -4,22 +4,23 @@ const path = require('path');
 const dossierAppData = app.getPath('userData'); 
 const dossierDestination = path.join(dossierAppData, 'games');
 const dataPath = path.join(dossierAppData, 'data.json');
+const { startScraping } = require('./scraper');
 
 const telechargementsActifs = {};
 
 // import './index.js'; 
-require('./index.js');
+require('./scraper.js');
 
 let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1252,
-    height: 800,
-    minHeight: 800,
-    maxHeight: 800,
-    minWidth: 1252,
-    maxWidth: 1252,
+    width: 1266,
+    height: 861,
+    minHeight: 861,
+    maxHeight: 861,
+    minWidth: 1266,
+    maxWidth: 1266,
     icon: path.join(__dirname, 'sources/kortexlogo.png'),
     frame: false, 
     autoHideMenuBar: true,
@@ -54,6 +55,36 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+
+  ipcMain.on('lancer-scraping', async () => {
+    console.log("📥 [Main] Demande de scraping reçue...");
+    
+    try {
+        // Le script attend ici que TOUTES les pages soient faites
+        const resultat = await startScraping(
+            (gameObj) => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('nouveau-jeu', gameObj);
+                }
+            },
+            (pourcentage) => {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.webContents.send('progression-scraping', pourcentage);
+                }
+            }
+        );
+
+        // 👈 AJOUTE CETTE SÉCURITÉ ICI : Une fois sorti de startScraping, c'est fini !
+        if (resultat && resultat.success) {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('scraping-termine');
+            }
+        }
+
+    } catch (error) {
+        console.error("❌ [Main] Erreur capturée durant le scraping :", error);
+    }
+});
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -254,98 +285,153 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
         }
 
         // ==========================================
-        // 4. TÉLÉCHARGEMENT HYBRIDE (MODE OVERCLOCKÉ 🚀)
-        // ==========================================
-        const cheminComplet = path.join(dossierDestination, nomFichierFinal);
-        const downloadController = new AbortController();
-        
-        console.log(`\n[ÉTAPE 4] Lancement du téléchargement sur : ${lienChoisi}`);
+// 4. TÉLÉCHARGEMENT HYBRIDE (MODE OVERCLOCKÉ 🚀)
+// ==========================================
+const cheminComplet = path.join(dossierDestination, nomFichierFinal);
+const downloadController = new AbortController();
 
-        if (cookiesHebergeur) {
-            baseHeaders['Cookie'] = cookiesHebergeur;
-        }
+console.log(`\n[ÉTAPE 4] Lancement du téléchargement sur : ${lienChoisi}`);
 
-        let totalOctets = 0;
-        let supporteChunks = false;
+if (cookiesHebergeur) {
+    baseHeaders['Cookie'] = cookiesHebergeur;
+}
 
-        try {
-            const pingRes = await gotScraping({
-                url: lienChoisi,
-                headers: { ...baseHeaders, 'Range': 'bytes=0-0' },
-                http2: true, 
-                throwHttpErrors: false,
-                timeout: { request: 10000 }
-            });
+let totalOctets = 0;
+let supporteChunks = false;
 
-            if (pingRes.statusCode === 206 && pingRes.headers['content-range']) {
-                supporteChunks = true;
-                totalOctets = parseInt(pingRes.headers['content-range'].split('/')[1], 10);
-                console.log(`[INFO] Multi-connexion supporté ! Taille : ${(totalOctets / (1024 * 1024)).toFixed(2)} Mo`);
-            } else {
-                totalOctets = parseInt(pingRes.headers['content-length'] || 0, 10);
-                console.log(`[INFO] Multi-connexion refusé. Passage en mode classique.`);
-            }
-        } catch (error) {
-            return { status: 'error', message: `Erreur de connexion au fichier final: ${error.message}` };
-        }
+try {
+    const pingRes = await gotScraping({
+        url: lienChoisi,
+        headers: { ...baseHeaders, 'Range': 'bytes=0-0' },
+        http2: false, 
+        throwHttpErrors: false,
+        timeout: { request: 10000 }
+    });
 
-        let telecharges = 0;
-        event.sender.send('debut-download', "start");
+    if (pingRes.statusCode === 206 && pingRes.headers['content-range']) {
+        supporteChunks = true;
+        totalOctets = parseInt(pingRes.headers['content-range'].split('/')[1], 10);
+        console.log(`[INFO] Multi-connexion supporté ! Taille : ${(totalOctets / (1024 * 1024)).toFixed(2)} Mo`);
+    } else {
+        totalOctets = parseInt(pingRes.headers['content-length'] || 0, 10);
+        console.log(`[INFO] Multi-connexion refusé. Passage en mode classique.`);
+    }
+} catch (error) {
+    return { status: 'error', message: `Erreur de connexion au fichier final: ${error.message}` };
+}
 
-        const progressInterval = setInterval(() => {
-            const progress = {
-                pourcentage: totalOctets > 0 ? ((telecharges / totalOctets) * 80).toFixed(1) + "%" : "Calcul...",
-                actuel: (telecharges / (1024 * 1024)).toFixed(2) + " Mo",
-                total: totalOctets > 0 ? (totalOctets / (1024 * 1024)).toFixed(2) + " Mo" : "Inconnu",
-                name: nomSecurise,
-            };
-            event.sender.send('update-download-progress', progress);
-        }, 1000);
+let telecharges = 0;
+let derniersOctets = 0;
+event.sender.send('debut-download', "start");
 
-        try {
-            if (supporteChunks) {
-                const chunkSize = Math.floor(totalOctets / nbChunks);
-                const promises = [];
-                const partFiles = [];
+const progressInterval = setInterval(() => {
+    const octetsDepuisDerniereFois = telecharges - derniersOctets;
+    derniersOctets = telecharges;
 
-                telechargementsActifs[nomSecurise] = { controller: downloadController, cheminFichier: cheminComplet };
+    const vitesseMoS = (octetsDepuisDerniereFois / (1024 * 1024)).toFixed(2);
 
-                for (let i = 0; i < nbChunks; i++) {
-                    const start = i * chunkSize;
-                    const end = i === nbChunks - 1 ? totalOctets - 1 : (start + chunkSize - 1);
-                    const partPath = `${cheminComplet}.part${i}`;
-                    partFiles.push(partPath);
+    const progress = {
+        pourcentage: totalOctets > 0 ? ((telecharges / totalOctets) * 80).toFixed(1) + "%" : "Calcul...",
+        actuel: (telecharges / (1024 * 1024)).toFixed(2) + " Mo",
+        total: totalOctets > 0 ? (totalOctets / (1024 * 1024)).toFixed(2) + " Mo" : "Inconnu",
+        name: nomSecurise,
+        vitesse: `${vitesseMoS} Mo/s`,
+    };
+    event.sender.send('update-download-progress', progress);
+}, 1000);
 
-                    promises.push(new Promise((resolve, reject) => {
-                        const stream = gotScraping.stream({
-                            url: lienChoisi,
-                            headers: { ...baseHeaders, 'Range': `bytes=${start}-${end}` },
-                            signal: downloadController.signal,
-                            http2: false, 
-                            timeout: { request: undefined },
-                            retry: { limit: 3 }
+try {
+    // ON INITIALISE L'OBJET GLOBAL ICI AVEC UN TABLEAU POUR LES STREAMS DE CHUNKS
+    telechargementsActifs[nomSecurise] = { 
+        controller: downloadController, 
+        cheminFichier: cheminComplet,
+        activeStreams: [] 
+    };
+
+    if (supporteChunks) {
+        const chunkSize = Math.floor(totalOctets / nbChunks);
+        const promises = [];
+        const partFiles = [];
+
+        for (let i = 0; i < nbChunks; i++) {
+            const start = i * chunkSize;
+            const end = i === nbChunks - 1 ? totalOctets - 1 : (start + chunkSize - 1);
+            const partPath = `${cheminComplet}.part${i}`;
+            partFiles.push(partPath);
+
+            promises.push((async () => {
+                let maxRetries = 5;
+                let octetsDuChunkTelecharges = 0;
+
+                for (let tentative = 1; tentative <= maxRetries; tentative++) {
+                    // SÉCURITÉ : Si annulé entre deux tentatives, on stoppe tout de suite
+                    if (downloadController.signal.aborted) break;
+
+                    try {
+                        const rangeStart = start + octetsDuChunkTelecharges;
+                        if (rangeStart > end) break;
+
+                        await new Promise((resolve, reject) => {
+                            if (downloadController.signal.aborted) return reject(new Error('Aborted'));
+
+                            const stream = gotScraping.stream({
+                                url: lienChoisi,
+                                headers: { ...baseHeaders, 'Range': `bytes=${rangeStart}-${end}` },
+                                signal: downloadController.signal,
+                                http2: false, 
+                                timeout: { 
+                                    response: 15000, // 15s max pour que le serveur réponde au départ
+                                    // read: 45000
+                                    request: 2147483647
+                                 },
+                                retry: { limit: 0 }
+                            });
+
+                            const writeStream = fs.createWriteStream(partPath, { 
+                                flags: octetsDuChunkTelecharges > 0 ? 'a' : 'w',
+                                highWaterMark: 4 * 1024 * 1024 
+                            });
+
+                            // AJOUT CRUCIAL : On enregistre les streams pour que stopDownload puisse les tuer
+                            telechargementsActifs[nomSecurise].activeStreams.push({ stream, writeStream });
+
+                            stream.on('data', (chunk) => { 
+                                telecharges += chunk.length; 
+                                octetsDuChunkTelecharges += chunk.length;
+                            });
+
+                            stream.pipe(writeStream);
+                            
+                            stream.on('end', resolve);
+                            stream.on('error', (err) => { writeStream.end(); reject(err); });
+                            writeStream.on('error', (err) => { reject(err); });
                         });
 
-                        const writeStream = fs.createWriteStream(partPath, { highWaterMark: 4 * 1024 * 1024 });
+                        break; // Succès du chunk, on sort de la boucle de retry
 
-                        stream.on('data', (chunk) => { telecharges += chunk.length; });
-                        stream.pipe(writeStream);
+                    } catch (err) {
+                        // FIX TÉLÉCHARGEMENT FANTÔME : Si c'est une annulation utilisateur, on sort du retry IMMEDIATEMENT
+                        if (downloadController.signal.aborted) {
+                            console.log(`[INFO] Chunk ${i} arrêté proprement suite à l'annulation de l'utilisateur.`);
+                            break; 
+                        }
+
+                        console.warn(`[⚠️ ATTENTION] Chunk ${i} déconnecté (Tentative ${tentative}/${maxRetries}) : ${err.message}. Reprise en cours...`);
                         
-                        stream.on('end', resolve);
+                        if (tentative === maxRetries) {
+                            downloadController.abort(); 
+                            throw new Error(`Le Chunk ${i} a définitivement planté après ${maxRetries} essais.`);
+                        }
                         
-                        stream.on('error', (err) => { 
-                            console.error(`[ERREUR] Chunk ${i} réseau a planté :`, err.message);
-                            downloadController.abort(); reject(err); 
-                        });
-                        writeStream.on('error', (err) => { 
-                            console.error(`[ERREUR] Chunk ${i} disque a planté :`, err.message);
-                            downloadController.abort(); reject(err); 
-                        });
-                    }));
+                        await new Promise(res => setTimeout(res, 2000));
+                    }
                 }
+            })());
+        }
 
-                await Promise.all(promises);
-                clearInterval(progressInterval); 
+        await Promise.all(promises);
+        clearInterval(progressInterval); 
+        // ... (le reste de ta fusion de fichiers reste identique)
 
                 console.log(`[INFO] Morceaux téléchargés. Fusion ultra-rapide en cours...`);
 
@@ -388,7 +474,7 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     url: lienChoisi,
                     headers: baseHeaders,
                     signal: downloadController.signal,
-                    http2: true,
+                    http2: false,
                     timeout: { request: undefined },
                     retry: {
                         limit: 5,
@@ -778,4 +864,20 @@ ipcMain.on('restart_app', () => {
 ipcMain.on('minimize-window', () => {
   const win = BrowserWindow.getFocusedWindow();
   if (win) win.minimize();
+});
+
+ipcMain.handle('charger-games-json', async () => {
+    const userDataPath = app.getPath('userData');
+    const jsonFile = path.join(userDataPath, 'games.json');
+
+    if (fs.existsSync(jsonFile)) {
+        try {
+            const data = fs.readFileSync(jsonFile, 'utf-8');
+            return JSON.parse(data); // On renvoie les données converties en objet
+        } catch (error) {
+            console.error("Erreur lors de la lecture du JSON :", error);
+            return {}; // En cas d'erreur, on renvoie un objet vide
+        }
+    }
+    return {}; // Si le fichier n'existe pas encore
 });

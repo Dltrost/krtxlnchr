@@ -30,5 +30,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onUpdateAvailable: (callback) => ipcRenderer.on('update_available', callback),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update_downloaded', callback),
     // Fonction pour envoyer la commande de redémarrage
-    restartApp: () => ipcRenderer.send('restart_app')
+    restartApp: () => ipcRenderer.send('restart_app'),
+
+    demarrerScraping: () => ipcRenderer.send('lancer-scraping'),
+
+    // Permet à script.js de recevoir un nouveau jeu
+    onNouveauJeu: (callback) => ipcRenderer.on('nouveau-jeu', (event, gameObj) => callback(gameObj)),
+  chargerGamesJson: () => ipcRenderer.invoke('charger-games-json'),
+  onScrapingTermine: (callback) => ipcRenderer.on('scraping-termine', () => callback()),
+    // Permet à script.js de recevoir l'avancement en %
+    onProgression: (callback) => ipcRenderer.on('progression-scraping', (event, pourcentage) => callback(pourcentage))
 });

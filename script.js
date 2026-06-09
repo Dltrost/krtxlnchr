@@ -16,8 +16,7 @@ function getPoids(gameName) {
 }
 
 async function loadCatalogue() {
-    const reponse = await fetch('./games.json');
-    const games = await reponse.json();
+    const games = await window.electronAPI.chargerGamesJson();
     
     const dossierJeuxExistants = await window.electronAPI.listerDossiersJeux();
     
@@ -53,9 +52,9 @@ async function loadCatalogue() {
         catalogueHTML += `
             <div onclick="gameSelected(this)" class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${normaliserNomJeu(gameData.gameName)}">
                 <div class="ingame" id="${normaliserNomJeu(gameData.gameName)}_ingame" style="display: none;"></div>
-                <div class="background-container" id="${normaliserNomJeu(gameData.gameName)}_ingame_scale" style="scale:1;"><div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');" data-bg="${gameData.imageLink}"></div></div>
+                <div class="background-container" id="${normaliserNomJeu(gameData.gameName)}_ingame_scale" style="scale:1; opacity:${estInstalle ? '100%' : '48%'}"><div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');" data-bg="${gameData.imageLink}"></div></div>
                 
-                <button style="display:${!estInstalle && !estEnDownload ? 'block' : 'none'};" onclick="downloadgame('${gameData.url}', '${gameData.gameName}', this)">
+                <button class="downloadButton" style="display:${!estInstalle && !estEnDownload ? 'block' : 'none'};" onclick="downloadgame('${gameData.url}', '${gameData.gameName}', this)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
                 </button>
                 <button onclick="play('${normaliserNomJeu(gameData.gameName)}', this)" style="display:${estInstalle && !estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button>
@@ -255,7 +254,7 @@ async function stopDownload(nomDuJeu, element) {
 // Dans ton script.js
 window.electronAPI.onDownloadProgress((data) => {
     document.getElementById(data.name).style.setProperty('--chargement-pourcent', 100 - parseFloat(data.pourcentage)+'%');
-    
+    document.getElementById('internetSpeed').innerHTML = data.vitesse;
     // Exemple d'utilisation :
     // const elementPourcentage = document.getElementById('pourcentage');
     // const elementInfos = document.getElementById('infos-mo');
@@ -296,8 +295,149 @@ window.electronAPI.onUpdateDownloaded(() => {
 });
 
 function updateGame(element) {
-    document.getElementById('app-content').style.opacity = "0";
-    document.getElementById('app-content').style.scale = "1.05";
-    setTimeout(()=>{document.getElementById('app-content').style.pointerEvents = "none";},0)
-    setTimeout(()=>{document.getElementById('app-content').style.display = "none";},200)
+    document.getElementById('catalogue-container').style.opacity = "0";
+    document.getElementById('catalogue-container').style.scale = "0.95";
+    document.getElementById('search-wrap').style.opacity = "0";
+    document.getElementById('search-wrap').style.scale = "0.95";
+    setTimeout(()=>{document.getElementById('catalogue-container').style.pointerEvents = "none";},0)
+    setTimeout(()=>{document.getElementById('catalogue-container').style.display = "none";},200)
+    setTimeout(()=>{
+        document.getElementById('update-content').style.opacity = "1";
+        document.getElementById('update-content').style.scale = "1";
+    },200)
+    setTimeout(()=>{
+        window.electronAPI.demarrerScraping();
+    },1000)
 }
+
+// 👈 Écoute le signal de fin
+window.electronAPI.onScrapingTermine(() => {
+    document.getElementById('catalogue-container').style.display = "block";
+    setTimeout(()=>{
+        document.getElementById('update-content').style.opacity = "";
+        document.getElementById('update-content').style.scale = "";
+    },400)
+    setTimeout(()=>{
+        document.getElementById('catalogue-container').style.pointerEvents = "all";
+        document.getElementById('catalogue-container').style.opacity = "";
+        document.getElementById('catalogue-container').style.scale = "";
+        document.getElementById('search-wrap').style.opacity = "";
+        document.getElementById('search-wrap').style.scale = "";
+    },1000)
+});
+
+// 1. Gestion de la file d'attente (Queue)
+const fileAttenteJeux = [];
+
+// Dès qu'un jeu arrive, on le pousse simplement dans la liste d'attente
+window.electronAPI.onNouveauJeu((gameObj) => {
+    fileAttenteJeux.push(gameObj);
+});
+
+// Toutes les 200ms, si la liste n'est pas vide, on pop le premier jeu et on l'anime
+setInterval(() => {
+    if (fileAttenteJeux.length > 0) {
+        const prochainJeu = fileAttenteJeux.shift();
+        propulserCarteJeu(prochainJeu);
+    }
+}, 10);
+
+
+// 2. Le moteur d'animation physique "Confetti"
+function propulserCarteJeu(gameObj) {
+    // =========================================================================
+    // 🎛️ LE GRAND TABLEAU DE BORD (Modifie les valeurs ici pour tout contrôler)
+    // =========================================================================
+    const REGLAGES = {
+        // 1. HAUTEUR DU SAUT (Plus les forces sont grandes, plus le jeu monte haut)
+        forceMonteeMin: 10,       // Impulsion minimale vers le haut
+        forceMonteeMax: 17,       // Impulsion maximale vers le haut
+        gravite: 0.14,            // Poids de la carte (plus bas = flotte dans l'air, plus haut = retombe vite)
+
+        // 2. VITESSE HORIZONTALE (Sens gauche / droite)
+        vitesseGaucheDroiteMin: 0.3,  // Vitesse de dérive minimale (en pixels/frame)
+        vitesseGaucheDroiteMax: 2,  // Vitesse de dérive maximale (en pixels/frame)
+
+        // 3. ROTATIONS (Les angles et le spin)
+        angleInitialMax: 15,      // Inclinaison max de la carte au pop (en degrés)
+        vitesseSpinMin: 0.15,     // Vitesse de rotation minimale
+        vitesseSpinMax: 0.6       // Vitesse de rotation maximale
+    };
+    // =========================================================================
+
+    // Vérifie ou crée le conteneur d'animation global
+    let overlay = document.getElementById('animation-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'animation-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    // Création de la carte
+    const card = document.createElement('div');
+    card.className = 'confetti-game-card';
+    card.style.backgroundImage = `url('${gameObj.data.imageLink}')`;
+
+    // Couleur des lights aléatoire
+    const couleursGlow = ['#00f2fe', '#4facfe', '#ff007f', '#ff00ff', '#00ff87', '#f9d423'];
+    const couleurAleatoire = couleursGlow[Math.floor(Math.random() * couleursGlow.length)];
+    card.style.setProperty('--glow-color', couleurAleatoire);
+
+    overlay.appendChild(card);
+
+    const largeurEcran = window.innerWidth;
+    const hauteurEcran = window.innerHeight;
+
+    // Position de départ (légèrement sous l'écran)
+    let x = (largeurEcran / 2) - 65; 
+    let y = hauteurEcran + 50; 
+
+    // Choix du côté (gauche ou droite)
+    const partADroite = Math.random() > 0.5;
+
+    // --- APPLICATION DIRECTE DE TES RÉGLAGES ---
+    
+    // Calcul de la vitesse horizontale selon tes bornes Min/Max
+    let vitesseX = (Math.random() * (REGLAGES.vitesseGaucheDroiteMax - REGLAGES.vitesseGaucheDroiteMin) + REGLAGES.vitesseGaucheDroiteMin) * (partADroite ? 1 : -1);
+
+    // Calcul de la force de montée (Vitesse Y négative pour monter)
+    let vitesseY = -(Math.random() * (REGLAGES.forceMonteeMax - REGLAGES.forceMonteeMin) + REGLAGES.forceMonteeMin); 
+
+    // Calcul de l'angle et de la vitesse de rotation
+    let angleRotation = (Math.random() * REGLAGES.angleInitialMax) * (partADroite ? 1 : -1); 
+    let vitesseRotation = (Math.random() * (REGLAGES.vitesseSpinMax - REGLAGES.vitesseSpinMin) + REGLAGES.vitesseSpinMin) * (partADroite ? 1 : -1); 
+
+    let aQuitteLeBas = false;
+
+    // Boucle de physique
+    function loop() {
+        x += vitesseX;
+        vitesseY += REGLAGES.gravite; // La gravité freine la montée
+        y += vitesseY;
+        angleRotation += vitesseRotation;
+
+        card.style.transform = `translate(${x}px, ${y}px) rotate(${angleRotation}deg)`;
+
+        if (y < hauteurEcran) {
+            aQuitteLeBas = true;
+        }
+
+        // Nettoyage de la carte quand elle sort par le bas
+        if (aQuitteLeBas && y > hauteurEcran + 250) {
+            card.remove(); 
+        } else {
+            requestAnimationFrame(loop); 
+        }
+    }
+
+    requestAnimationFrame(loop);
+}
+
+window.electronAPI.onProgression((pourcentage) => {
+    console.log(`📊 Progression : ${pourcentage}%`);
+    const textePourcent = document.getElementById('loadingpourcentage')
+    // Met à jour le texte du pourcentage
+    if (textePourcent) {
+        textePourcent.innerText = `${pourcentage}%`;
+    }
+});
