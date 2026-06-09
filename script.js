@@ -1,12 +1,18 @@
+// --- VARIABLES GLOBALES DE STOCKAGE ---
+let catalogueGames = [];       // Contient la totalité des jeux bruts
+let nomsInstalleGlobal = [];   // Dossiers installés normalisés
+let nomsEnRarGlobal = [];      // Téléchargements en cours normalisés
+
+// ⚙️ VARIABLES POUR LE RENDU PROGRESSIF (ANTI-LAG)
+let listeAfficheeActuelle = []; // Liste filtrée/triée en cours de lecture
+let indexAffichage = 0;         // Jusqu'où on est rendu dans l'affichage
+const TAILLE_VAGUE = 60;        // Nombre de jeux affichés par vague
+let observateurSentinelle = null;
+
 // Fonction pour transformer un nom de jeu en nom de dossier normalisé
 function normaliserNomJeu(nom) {
-    // Remplace les caractères non alphanumériques par '_'
     return nom.toLowerCase().replace(/[^a-z0-9]/g, "_");
 }
-
-let catalogueGames = [];
-let nomsInstalleGlobal = [];
-let nomsEnRarGlobal = [];
 
 function getPoids(gameName) {
     const nom = normaliserNomJeu(gameName);
@@ -15,102 +21,140 @@ function getPoids(gameName) {
     return 1;
 }
 
+// Fonction helper pour générer proprement le HTML d'une seule carte
+function genererHTMLCarteJeu(gameData, estInstalle, estEnDownload) {
+    const nomNormalise = normaliserNomJeu(gameData.gameName);
+    
+    // 💡 ASTUCE PERF : On met l'image directement si on est dans les premières vagues, 
+    // ou on laisse le navigateur gérer le décodage asynchrone.
+    return `
+        <div onclick="gameSelected(this)" class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${nomNormalise}">
+            <div class="ingame" id="${nomNormalise}_ingame" style="display: none;"></div>
+            <div class="background-container" id="${nomNormalise}_ingame_scale" style="scale:1; opacity:${estInstalle ? '100%' : '48%'}">
+                <div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');"></div>
+            </div>
+            
+            <button class="downloadButton" style="display:${!estInstalle && !estEnDownload ? 'block' : 'none'};" onclick="downloadgame('${gameData.url}', '${gameData.gameName}', this)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+            </button>
+            <button onclick="play('${nomNormalise}', this)" style="display:${estInstalle && !estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button>
+            <button onclick="stopDownload('${nomNormalise}', this)" style="display:${estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-icon lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></button>
+            <button onclick="uninstall('${nomNormalise}', this)" class="uninstall" style="display:${estInstalle ? 'block' : 'none'}; color: red;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-icon lucide-trash"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+    `;
+}
+
+// 1. Chargement initial des données
 async function loadCatalogue() {
     const games = await window.electronAPI.chargerGamesJson();
-    
     const dossierJeuxExistants = await window.electronAPI.listerDossiersJeux();
     
-    // On crée deux listes distinctes pour bien les identifier
-    const nomsInstalle = dossierJeuxExistants
+    nomsInstalleGlobal = dossierJeuxExistants
         .filter(d => !d.endsWith('.rar'))
         .map(d => normaliserNomJeu(d));
 
-    const nomsEnRar = dossierJeuxExistants
+    nomsEnRarGlobal = dossierJeuxExistants
         .filter(d => d.endsWith('.rar.part0'))
         .map(d => normaliserNomJeu(d.replace('.rar.part0', '')));
 
-    nomsInstalleGlobal = nomsInstalle;
-    nomsEnRarGlobal = nomsEnRar;
+    // Tri par poids initial automatique
+    catalogueGames = Object.values(games).sort((a, b) => getPoids(b.gameName) - getPoids(a.gameName));
 
-    // Le tri initial par poids
-    const jeuxTries = Object.values(games).sort((a, b) => {
-        return getPoids(b.gameName) - getPoids(a.gameName);
-    });
-
-    catalogueGames = jeuxTries;
-
-    // On affiche la liste (par défaut triée par poids)
-    let catalogueHTML = ``;
-    
-    for (let gameData of jeuxTries) {
-        const nomNormalise = normaliserNomJeu(gameData.gameName);
-        
-        // On vérifie maintenant avec nos nouvelles listes
-        const estInstalle = nomsInstalle.includes(nomNormalise);
-        const estEnDownload = nomsEnRar.includes(nomNormalise);
-        // ${estInstalle ? 'downloaded' : ''}
-        catalogueHTML += `
-            <div onclick="gameSelected(this)" class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${normaliserNomJeu(gameData.gameName)}">
-                <div class="ingame" id="${normaliserNomJeu(gameData.gameName)}_ingame" style="display: none;"></div>
-                <div class="background-container" id="${normaliserNomJeu(gameData.gameName)}_ingame_scale" style="scale:1; opacity:${estInstalle ? '100%' : '48%'}"><div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');" data-bg="${gameData.imageLink}"></div></div>
-                
-                <button class="downloadButton" style="display:${!estInstalle && !estEnDownload ? 'block' : 'none'};" onclick="downloadgame('${gameData.url}', '${gameData.gameName}', this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
-                </button>
-                <button onclick="play('${normaliserNomJeu(gameData.gameName)}', this)" style="display:${estInstalle && !estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button>
-                <button onclick="stopDownload('${normaliserNomJeu(gameData.gameName)}', this)" style="display:${estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-icon lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></button>
-                <button onclick="uninstall('${normaliserNomJeu(gameData.gameName)}', this)" class="uninstall" style="display:${estInstalle ? 'block' : 'none'};color=red;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-icon lucide-trash"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-            </div>
-        `;
-    }
-
-    document.getElementById('catalogue').innerHTML = catalogueHTML;
-    activerLeVirtualScroll();
+    // On délègue immédiatement au moteur de rendu optimisé
+    renderCatalogue();
 }
 
+// 2. Moteur de rendu principal (Calcul les filtres et prépare la structure)
 function renderCatalogue(filterText = '') {
     const q = String(filterText || '').trim().toLowerCase();
     const sortByNameCheckbox = document.getElementById('sortByName');
 
+    // Étape A : Filtrage
     let liste = catalogueGames.slice();
     if (q.length) {
         liste = liste.filter(g => g.gameName.toLowerCase().includes(q));
     }
 
+    // Étape B : Tri
     if (sortByNameCheckbox && sortByNameCheckbox.checked) {
         liste.sort((a, b) => a.gameName.localeCompare(b.gameName, 'fr', { sensitivity: 'base' }));
     } else {
         liste.sort((a, b) => getPoids(b.gameName) - getPoids(a.gameName));
     }
 
-    let catalogueHTML = ``;
-    for (let gameData of liste) {
+    // Étape C : Reset de l'affichage progressif
+    listeAfficheeActuelle = liste;
+    indexAffichage = 0;
+
+    // On nettoie le catalogue et on y injecte une zone pour les jeux + une sentinelle invisible tout au fond
+    document.getElementById('catalogue').innerHTML = `
+        <div id="grid-container-jeux"></div>
+        <div id="sentinelle-scroll" style="height: 50px; width: 100%; clear: both;"></div>
+    `;
+
+    // On lance la première vague d'affichage
+    injecterProchaineVague();
+    
+    // On active l'écouteur de scroll intelligent sur la sentinelle
+    activerInfiniteScroll();
+}
+
+// 3. Injecteur de vagues HTML (N'ajoute que 60 éléments à la fois)
+function injecterProchaineVague() {
+    const conteneurGrid = document.getElementById('grid-container-jeux');
+    if (!conteneurGrid || indexAffichage >= listeAfficheeActuelle.length) return;
+
+    const fin = Math.min(indexAffichage + TAILLE_VAGUE, listeAfficheeActuelle.length);
+    let htmlVague = '';
+
+    for (let i = indexAffichage; i < fin; i++) {
+        const gameData = listeAfficheeActuelle[i];
         const nomNormalise = normaliserNomJeu(gameData.gameName);
         const estInstalle = nomsInstalleGlobal.includes(nomNormalise);
         const estEnDownload = nomsEnRarGlobal.includes(nomNormalise);
-        catalogueHTML += `
-            <div onclick="gameSelected(this)" class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${normaliserNomJeu(gameData.gameName)}">
-                <div class="ingame" id="${normaliserNomJeu(gameData.gameName)}_ingame" style="display: none;"></div>
-                <div class="background-container" id="${normaliserNomJeu(gameData.gameName)}_ingame_scale" style="scale:1;"><div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');" data-bg="${gameData.imageLink}"></div></div>
-                <div class="gameData">
-                    <p class="size">Size: <span>26.3GB</span></p>
-                    <p class="version">n°: <span>Build 23340805</span></p>
-                </div>
-                <button style="display:${!estInstalle && !estEnDownload ? 'block' : 'none'};" onclick="downloadgame('${gameData.url}', '${gameData.gameName}', this)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
-                </button>
-                <button onclick="play('${normaliserNomJeu(gameData.gameName)}', this)" style="display:${estInstalle && !estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button>
-                <button onclick="stopDownload('${normaliserNomJeu(gameData.gameName)}', this)" style="display:${estEnDownload ? 'block' : 'none'};"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square-icon lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></button>
-                <button onclick="uninstall('${normaliserNomJeu(gameData.gameName)}', this)" class="uninstall" style="display:${estInstalle ? 'block' : 'none'};color=red;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-icon lucide-trash"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-            </div>
-        `;
+
+        htmlVague += genererHTMLCarteJeu(gameData, estInstalle, estEnDownload);
     }
 
-    document.getElementById('catalogue').innerHTML = catalogueHTML;
-    activerLeVirtualScroll();
+    // On AJOUTE (+=) au lieu de tout écraser, ce qui évite au navigateur de tout recalculer
+    conteneurGrid.insertAdjacentHTML('beforeend', htmlVague);
+    indexAffichage = fin;
 }
 
-// Hook pour la recherche en direct et le tri
+// 4. L'observateur qui détecte quand on arrive en bas de page
+function activerInfiniteScroll() {
+    // Si un ancien observateur existait, on le déconnecte pour éviter les fuites de mémoire
+    if (observateurSentinelle) {
+        observateurSentinelle.disconnect();
+    }
+
+    const sentinelle = document.getElementById('sentinelle-scroll');
+    if (!sentinelle) return;
+
+    const options = {
+        root: document.getElementById('catalogue'), // Fenêtre de scroll
+        rootMargin: '400px', // Déclenche le chargement 400px AVANT d'arriver tout en bas (invisible pour l'utilisateur)
+        threshold: 0.01
+    };
+
+    observateurSentinelle = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            // Si la sentinelle entre dans le champ de vision, on charge la suite
+            if (entry.isIntersecting) {
+                injecterProchaineVague();
+                
+                // Si on a tout affiché, on peut arrêter d'observer
+                if (indexAffichage >= listeAfficheeActuelle.length) {
+                    observateurSentinelle.unobserve(sentinelle);
+                }
+            }
+        });
+    }, options);
+
+    observateurSentinelle.observe(sentinelle);
+}
+
+// Hook pour la recherche en direct et le tri au chargement du DOM
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search');
     const sortByName = document.getElementById('sortByName');
@@ -124,37 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadCatalogue();
 });
-
-function activerLeVirtualScroll() {
-    const options = {
-        root: document.getElementById('catalogue'), // CORRECTION : On cible ton conteneur qui a le scroll
-        rootMargin: '300px 0px', 
-        threshold: 0.01
-    };
-
-    const observateur = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const wrapper = entry.target;
-                // CORRECTION : On va chercher la div .background à l'intérieur pour lui coller l'image
-                const bgImage = wrapper.querySelector('.background');
-                const imageUrL = wrapper.getAttribute('data-bg');
-
-                if (bgImage) {
-                    bgImage.style.backgroundImage = `url('${imageUrL}')`;
-                }
-                
-                // On applique le flag visible sur le conteneur complet
-                wrapper.classList.add('visible'); 
-                observer.unobserve(wrapper);
-            }
-        });
-    }, options);
-
-    // CORRECTION : On sélectionne la bonne classe générée (wrapper)
-    const tousLesJeux = document.querySelectorAll('.game-inner-box-wrapper');
-    tousLesJeux.forEach(jeu => observateur.observe(jeu));
-}
 
 
 

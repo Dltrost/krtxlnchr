@@ -9,13 +9,22 @@
     bottom: 1px;
     border-radius: 0px;
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    /* grid-template-columns: repeat(6, 1fr); */
     gap: 10px;
     flex-direction: row;
     flex-wrap: wrap;
     /* padding: 10px; */
     overflow: hidden;
     overflow-y: scroll;
+}
+
+#grid-container-jeux {
+    display: grid;
+    /* Ajuste la taille minimale (ici 140px) selon la largeur de tes cartes */
+    grid-template-columns: repeat(6, 1fr); 
+    gap: 10px;          /* L'espace entre tes cartes */
+    /* padding: 20px;      Optionnel : pour décoller les cartes des bords */
+    width: 100%;
 }
 
 #catalogue-container {
