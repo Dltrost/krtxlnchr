@@ -6,8 +6,8 @@ contextBridge.exposeInMainWorld('api', {
   envoyerMessage: async (donnee, name) => {
     return await ipcRenderer.invoke('canal-securise', donnee, name);
   },
-  getGameData: async (donnee, name) => {
-    return await ipcRenderer.invoke('getGameData', donnee, name);
+  getGameData: async (donnee, name, nom) => {
+    return await ipcRenderer.invoke('getGameData', donnee, name, nom);
   },
   startGame: async (nom) => {
     return await ipcRenderer.invoke('startGame', nom);
@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('api', {
   },
   stopDownload: async (nom) => {
     return await ipcRenderer.invoke('stopDownload', nom);
+  },
+  copyID: async (id) => {
+    return await ipcRenderer.invoke('copyID', id);
   }
 });
 
@@ -27,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     listerDossiersJeux: () => ipcRenderer.invoke('lister-dossiers-jeux'),
     onGameStatus: (callback) => ipcRenderer.on('game-status-tracking', callback),
     minimize: () => ipcRenderer.send('minimize-window'),
+    openFolder: () => ipcRenderer.send('openFolder'),
     onUpdateAvailable: (callback) => ipcRenderer.on('update_available', callback),
     onUpdateDownloaded: (callback) => ipcRenderer.on('update_downloaded', callback),
     // Fonction pour envoyer la commande de redémarrage

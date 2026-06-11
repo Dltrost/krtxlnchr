@@ -204,6 +204,10 @@
     background-color: rgba(127, 196, 173, 0.36) !important;
 }
 
+#downloadbtn {
+    width: 100% !important;
+}
+
 .gameData {
     position: absolute;
     z-index: 14;
@@ -413,6 +417,39 @@
     }
 
     .update-btn:hover {
+        /* scale: 1.05; */
+        /* border: 1px solid #25252A; */
+        transition-duration: 0.2s;
+        filter: brightness(1.2);
+    }
+
+    .folder-btn {
+      -webkit-app-region: no-drag; /* Permet de cliquer sur le bouton malgré le drag */
+      background-color: transparent;
+      border: none;
+      color: #919996;
+      background-color: rgba(13, 25, 21, 0.61);
+      border-radius: 13px;
+      width: 37px;
+      height: 37px;
+      cursor: pointer;
+      position: absolute;
+      right: 235px;
+      top: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition-duration: 0.2s;
+      /* border: 1px solid #25252a00; */
+    }
+
+    .folder-btn svg {
+        width: 18px;
+        height: 18px;
+        margin-bottom: 1px;
+    }
+
+    .folder-btn:hover {
         /* scale: 1.05; */
         /* border: 1px solid #25252A; */
         transition-duration: 0.2s;
@@ -703,3 +740,241 @@
     background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
     border-radius: 8px;
 } */
+
+#game-info {
+    position: absolute;
+    width: calc(100% - 73px);
+    height: calc(100% - 57px);
+    left: 73px;
+    top: 57px;
+    z-index: 300;
+    opacity: 0;
+    /* display: none; */
+    transition-duration: 0.3s;
+    pointer-events: none;
+}
+
+.backgroundBlur {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3.9px);
+    border-radius: 14px 0 14px 0;
+}
+
+.game-info {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    width: calc(532px - 38px);
+    height: calc(648px - 38px);
+    background-color: #13231D;
+    border: 1px solid #243832;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    padding: 19px;
+    gap: 9px;
+}
+
+.image-background {
+    width: 100%;
+    height: 278px;
+    /* background-color: red; */
+    border-radius: 9px;
+    background-color: #0f1b17;
+    background-image: url("./sources/Empty.png");
+    background-position: center;
+    background-size: 100%;
+    transition-duration: 0.2s;
+    position: relative;
+}
+
+.image-background:hover {
+    transition-duration: 0.5s;
+    background-size: 102%;
+}
+
+.preview {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 9px;
+    height: 132px;
+    /* background-color: red; */
+}
+
+.preview div {
+    width: 100%;
+    height: 100%;
+    background-color: #0f1b17;
+    border-radius: 9px;
+    background-size: 100%;
+    background-position: center;
+    transition-duration: 0.2s;
+}
+
+.preview div:hover {
+    transition-duration: 0.5s;
+    background-size: 102%;
+}
+
+.info {
+    background-color: #111D19;
+    border-radius: 9px;
+    width: calc(100% - 27px);
+    height: calc(124px - 21px);
+    display: flex;
+    flex-direction: column;
+    padding-left: 27px;
+    padding-top: 21px;
+    color: #64736D;
+    gap: 6px;
+}
+
+.info span {
+    font-size: 14px;
+    color: #64736D;
+}
+
+.info span span {
+    font-weight: bold;
+    color: #AEC5BD;
+}
+
+.copyID {
+    position: absolute;
+    width: 14px;
+    margin-top: -3px;
+    /* right: 40px; */
+    margin-left: 10px;
+    background-color: #080e0b;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.342);
+    transition-duration: 0.2s;
+}
+
+.copyID:hover {
+    scale: 1.05;
+    transition-duration: 0.2s;
+}
+
+.gamebuttons {
+    height: 49px;
+    gap: 9px;
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: end;
+}
+
+.gamebuttons button {
+    position: relative;
+    width: 100%;
+    padding-left: 20px;
+    padding-right: 10px;
+    height: 49px;
+    border-radius: 9px;
+    background-color: black;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    transition-duration: 0.2s;
+    overflow: hidden;
+    justify-content: center;
+    align-items: center;
+}
+
+.gamebuttons button svg {
+    width: 19px;
+    margin-top: -2px;
+    margin-right: 10px;
+}
+
+.gamebuttons button::after {
+    content: "";
+    height: 300%;
+    width: 40px;
+    left: -50px;
+    top: -35px;
+    rotate: -46deg;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.123), transparent);
+    position: absolute;
+    transition-duration: 0.7s;
+}
+
+.gamebuttons button:hover::after {
+    left: 130%;
+}
+
+.gamebuttons button:hover {
+    scale: 1.02;
+    filter: brightness(1.2);
+    transition-duration: 0.2s;
+}
+
+#game-time {
+    position: absolute;
+    right: 9px;
+    bottom: 9px;
+    font-size: 14px;
+    color: #919996;
+    padding: 10px 15px 10px 15px;
+    background-color: rgba(54, 54, 54, 0.83);
+    backdrop-filter: blur(3.7px);
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+}
+
+#game-time svg {
+    width: 17px;
+    margin-right: 9px;
+}
+
+.closepage {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    color: #919996;
+    width: 37px;
+    height: 37px;
+    background-color: rgba(54, 54, 54, 0.83);
+    backdrop-filter: blur(3.7px);
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition-duration: 0.2s;
+}
+
+.closepage:hover {
+    transition-duration: 0.2s;
+    scale: 1.05;
+}
+
+.closepage svg {
+    width: 18px;
+}
+
+.startGameButton {
+    background: #204135 !important;
+    color: #A7AFAD;
+    font-size: 14px;
+}
+
+.uninstallButton {
+    background-color: #652525 !important;
+    color: #DDCFCF;
+    font-size: 14px;
+}

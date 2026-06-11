@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut,shell,clipboard } = require('electron');
 const path = require('path');
 
 const dossierAppData = app.getPath('userData'); 
@@ -620,6 +620,9 @@ ipcMain.handle('uninstallGame', async (event, nomJeu) => {
 
 const { spawn } = require('child_process'); // 🚀 On utilise spawn au lieu de exec
 
+ipcMain.handle('copyID', async (event, id) => {
+    clipboard.writeText(id)
+})
 ipcMain.handle('startGame', async (event, nomJeu) => {
     try {
         // const dossierDestination = path.join(__dirname, 'games');
@@ -645,27 +648,83 @@ ipcMain.handle('startGame', async (event, nomJeu) => {
             appData[nomJeu] = { tempsDeJeu: 0 };
         }
 
-        // Fonction récursive pour chercher le premier .exe
-        function trouverExe(dir) {
-            const fichiers = fs.readdirSync(dir, { withFileTypes: true });
-            for (const fichier of fichiers) {
-                const cheminComplet = path.join(dir, fichier.name);
-                if (fichier.isDirectory()) {
-                    if (fichier.name !== '_CommonRedist') {
-                        const resultat = trouverExe(cheminComplet);
-                        if (resultat) return resultat;
-                    }
-                } else if (fichier.name.toLowerCase().endsWith('.exe')) { // <-- Coquille corrigée ici
-                    // Petite sécurité pour éviter les désinstallateurs ou sous-composants si besoin
-                    if (!fichier.name.toLowerCase().includes('unins') && !fichier.name.toLowerCase().includes('unitycrashhandler')) {
-                        return cheminComplet;
-                    }
+        // Fonction récursive pour chercher et analyser TOUS les .exe
+function trouverExe(dir, nomJeuCible) {
+    let listeExe = [];
+
+    function scannerDossier(dossierActuel) {
+        const fichiers = fs.readdirSync(dossierActuel, { withFileTypes: true });
+        
+        for (const fichier of fichiers) {
+            const cheminComplet = path.join(dossierActuel, fichier.name);
+            
+            if (fichier.isDirectory()) {
+                // Blacklist des dossiers à ignorer (optimisation)
+                const dossiersIgnores = ['_commonredist', 'redist', 'directx', 'vcredist', 'dotnet', 'extras'];
+                if (!dossiersIgnores.includes(fichier.name.toLowerCase())) {
+                    scannerDossier(cheminComplet);
+                }
+            } else if (fichier.name.toLowerCase().endsWith('.exe')) {
+                const nomFichier = fichier.name.toLowerCase();
+                
+                // Blacklist étendue des mots-clés dans le nom du fichier
+                const motsInterdits = [
+                    'unins', 'crash', 'setup', 'config', 'server', 
+                    'tool', 'reporter', 'benchmark', 'updater', 'redist'
+                ];
+                
+                const contientMotInterdit = motsInterdits.some(mot => nomFichier.includes(mot));
+                
+                if (!contientMotInterdit) {
+                    listeExe.push(cheminComplet);
                 }
             }
-            return null;
         }
+    }
 
-        const executable = trouverExe(dossierJeu);
+    // Lancer le scan
+    scannerDossier(dir);
+
+    // S'il n'y a rien ou un seul exécutable valide, le choix est vite fait
+    if (listeExe.length === 0) return null;
+    if (listeExe.length === 1) return listeExe[0];
+
+    // --- STRATÉGIE DE TRI S'IL Y A PLUSIEURS .EXE ---
+    
+    // 1. Essayer de faire correspondre le nom du fichier au nom du jeu
+    // On enlève les espaces et caractères spéciaux pour comparer
+    const nomJeuNettoye = nomJeuCible.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    for (const exe of listeExe) {
+        const nomExeBrut = path.basename(exe).toLowerCase().replace(/[^a-z0-9]/g, "");
+        // Si le nom du jeu est dans le nom de l'exe, ou inversement
+        if (nomExeBrut.includes(nomJeuNettoye) || (nomJeuNettoye !== "" && nomJeuNettoye.includes(nomExeBrut))) {
+            return exe;
+        }
+    }
+
+    // 2. Fallback (Plan B) : Prendre le .exe avec la taille de fichier la plus grande
+    // Le jeu complet fait souvent des dizaines de Mo, contrairement aux petits utilitaires
+    let plusGrosExe = listeExe[0];
+    let tailleMax = 0;
+    
+    for (const exe of listeExe) {
+        try {
+            const stats = fs.statSync(exe);
+            if (stats.size > tailleMax) {
+                tailleMax = stats.size;
+                plusGrosExe = exe;
+            }
+        } catch (e) {
+            console.error(`Impossible de lire la taille de ${exe}`);
+        }
+    }
+
+    return plusGrosExe;
+}
+
+// Utilisation (n'oublie pas de lui passer le nom du jeu !)
+const executable = trouverExe(dossierJeu, nomJeu);
 
         if (executable) {
             console.log(`🚀 Lancement et tracking du jeu : ${executable}`);
@@ -790,30 +849,45 @@ ipcMain.handle('stopDownload', async (event, nomJeu) => {
     }
 });
 
-ipcMain.handle('getGameData', async (event, urlRecue, nomJeu) => {
+ipcMain.handle('getGameData', async (event, urlRecue, nom) => {
     try {
         console.log(`[SCRAPING] Tentative de récupération des données : ${urlRecue}`);
 
-        // 1. Importation dynamique de got-scraping (comme dans ton script parfait)
+        // 1. Importation dynamique de got-scraping
         const { gotScraping } = await import('got-scraping');
 
-        // 2. Requête sécurisée anti-403 utilisant HTTP/2 et les empreintes de navigateur complètes
+        // 2. Requête sécurisée anti-403 utilisant HTTP/2
         const responseSteamRip = await gotScraping({ 
             url: urlRecue, 
             http2: true 
         });
 
-        // 3. Chargement du HTML (récupéré dans responseSteamRip.body)
+        // 3. Chargement du HTML
         const $ = cheerio.load(responseSteamRip.body);
 
         let gameSize = null;
         let version = null;
+        let servers = [];
+        let mainImage = null;
+        let previews = [];
+
+        const contenuBrut = fs.readFileSync(dataPath, 'utf-8');
+        donneesParties = JSON.parse(contenuBrut);
+
+        // Helper pour formater les URLs relatives en absolues (rajoute https://steamrip.com devant si besoin)
+        const getAbsoluteUrl = (path) => {
+            if (!path) return null;
+            try {
+                return new URL(path, urlRecue).href;
+            } catch (e) {
+                return path;
+            }
+        };
 
         // 4. Parcourir tous les éléments <li> de la page pour extraire les infos
         $('li').each((index, element) => {
             const textComplet = $(element).text().trim();
 
-            // Recherche insensible à la casse
             if (textComplet.toLowerCase().includes('game size:')) {
                 gameSize = textComplet.replace(/game size:/i, '').trim();
             }
@@ -823,14 +897,68 @@ ipcMain.handle('getGameData', async (event, urlRecue, nomJeu) => {
             }
         });
 
-        console.log(`[SUCCÈS] Données récupérées - Size: ${gameSize} | Version: ${version}`);
+        // 5. Récupération des noms de serveurs
+        $('a.shortc-button').each((index, element) => {
+            const buttonText = $(element).text().trim();
+            
+            if (buttonText.toUpperCase() === 'DOWNLOAD HERE') {
+                let rawServerName = $(element).parent().text().replace(/DOWNLOAD HERE/ig, '').trim();
+                
+                if (rawServerName) {
+                    const formattedName = rawServerName.charAt(0).toUpperCase() + rawServerName.slice(1).toLowerCase();
+                    if (!servers.includes(formattedName)) {
+                        servers.push(formattedName);
+                    }
+                }
+            }
+        });
 
-        // 5. Retour des valeurs (converties automatiquement en JSON via l'IPC)
+        const mainImgElement = $('figure.single-featured-image img');
+        let rawMainImage = mainImgElement.attr('src');
+
+        // Si l'image est en Base64 (commence par "data:image") ou absente, on ruse :
+        if (!rawMainImage || rawMainImage.startsWith('data:')) {
+            const srcset = mainImgElement.attr('srcset');
+            const dataSrc = mainImgElement.attr('data-src') || mainImgElement.attr('data-lazy-src');
+
+            if (srcset) {
+                // Le srcset ressemble à : "url_1 1280w, url_2 300w". 
+                // On prend le premier élément de la liste, puis on isole l'URL avant l'espace.
+                rawMainImage = srcset.split(',')[0].trim().split(' ')[0];
+            } else if (dataSrc) {
+                // Alternative si le site utilise un attribut data-src standard
+                rawMainImage = dataSrc;
+            }
+        }
+
+        if (rawMainImage) {
+            mainImage = getAbsoluteUrl(rawMainImage);
+        }
+
+        // 7. Récupération des previews
+        // On cible les images avec la classe 'alignnone', puis on cherche le href du parent <a> pour la HD
+        $('img.alignnone').each((index, element) => {
+            const parentAnchor = $(element).parent('a').attr('href');
+            // Si le parent <a> n'a pas de href, on se rabat sur le src de l'image
+            const imgSrc = parentAnchor || $(element).attr('src'); 
+            
+            if (imgSrc) {
+                previews.push(getAbsoluteUrl(imgSrc));
+            }
+        });
+
+        console.log(`[SUCCÈS] Données récupérées - Size: ${gameSize} | Version: ${version} | Images trouvées: ${previews.length + (mainImage ? 1 : 0)}`);
+
+        // 8. Retour des valeurs (converties automatiquement en JSON via l'IPC)
+        // console.log(mainImage)
         return {
             success: true,
-            nomJeu: nomJeu,
             gameSize: gameSize || "Non trouvé",
-            version: version || "Non trouvé"
+            version: version || "Non trouvé",
+            servers: servers.length > 0 ? servers : ["/."],
+            mainImage: mainImage || "Non trouvé",
+            previews: previews.length > 0 ? previews : [],
+            playTime: donneesParties[nom] ? donneesParties[nom].tempsDeJeu : "0"
         };
 
     } catch (error) {
@@ -864,6 +992,27 @@ ipcMain.on('restart_app', () => {
 ipcMain.on('minimize-window', () => {
   const win = BrowserWindow.getFocusedWindow();
   if (win) win.minimize();
+});
+
+ipcMain.on('openFolder', async () => {
+    // 📂 'userData' pointe directement vers AppData/Roaming/[NomDeTonApp]
+    const cheminDossierGames = path.join(app.getPath('userData'), 'games');
+
+    console.log(`📂 [Main] Tentative d'ouverture du dossier : ${cheminDossierGames}`);
+
+    try {
+        // 🛠️ SÉCURITÉ : Si le dossier n'existe pas encore, on le crée
+        if (!fs.existsSync(cheminDossierGames)) {
+            fs.mkdirSync(cheminDossierGames, { recursive: true });
+            console.log("📁 Le dossier 'games' n'existait pas, il a été créé avec succès.");
+        }
+
+        // 🚀 Ouvre le dossier dans l'explorateur Windows (ou le Finder sur Mac)
+        await shell.openPath(cheminDossierGames);
+
+    } catch (error) {
+        console.error("❌ Impossible d'ouvrir ou de créer le dossier :", error);
+    }
 });
 
 ipcMain.handle('charger-games-json', async () => {

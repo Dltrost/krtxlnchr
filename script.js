@@ -28,9 +28,9 @@ function genererHTMLCarteJeu(gameData, estInstalle, estEnDownload) {
     // 💡 ASTUCE PERF : On met l'image directement si on est dans les premières vagues, 
     // ou on laisse le navigateur gérer le décodage asynchrone.
     return `
-        <div onclick="gameSelected(this)" class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${nomNormalise}">
+        <div class="game-inner-box ${estInstalle ? 'downloaded' : ''}" id="${nomNormalise}" name="${estInstalle ? 'downloaded' : estEnDownload ? "downloading" : 'uninstalled'}" data-gameurl="${gameData.url}">
             <div class="ingame" id="${nomNormalise}_ingame" style="display: none;"></div>
-            <div class="background-container" id="${nomNormalise}_ingame_scale" style="scale:1; opacity:${estInstalle ? '100%' : '48%'}">
+            <div onclick="gameSelected('${gameData.url}','${gameData.gameName}', this)" class="background-container" id="${nomNormalise}_ingame_scale" style="scale:1; opacity:${estInstalle ? '100%' : '48%'}">
                 <div class="background ${estInstalle ? 'downloaded' : ''}" style="background-image: url('${gameData.imageLink}');"></div>
             </div>
             
@@ -46,6 +46,7 @@ function genererHTMLCarteJeu(gameData, estInstalle, estEnDownload) {
 
 // 1. Chargement initial des données
 async function loadCatalogue() {
+    closegame()
     const games = await window.electronAPI.chargerGamesJson();
     const dossierJeuxExistants = await window.electronAPI.listerDossiersJeux();
     
@@ -178,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
 ////////////////////////////////
 ////////////////////////////////
 
-async function downloadgame(nomDuJeu, name, element) {
+async function downloadgame(nomDuJeu, name, element = null) {
     // 1. Changement des styles visuels
     window.api.envoyerMessage(nomDuJeu, name);
     element.style.scale = 0;
@@ -227,19 +228,52 @@ async function finalDownload(nomDuJeu, name, element){
     }
 }
 
+function formaterTemps(secondes) {
+    // Calcul des différentes unités
+    const jours = Math.floor(secondes / (3600 * 24));
+    const heures = Math.floor((secondes % (3600 * 24)) / 3600);
+    const minutes = Math.floor((secondes % 3600) / 60);
+
+    let resultat = [];
+
+    // On n'ajoute les unités que si elles sont supérieures à 0
+    if (jours > 0) resultat.push(`${jours}j`);
+    if (heures > 0) resultat.push(`${heures}h`);
+    if (minutes > 0) resultat.push(`${minutes}min`);
+
+    // Si le temps est inférieur à 1 minute, on affiche au moins 0min
+    return resultat.length > 0 ? resultat.join(' ') : "0min";
+}
+
+function couperTexte(texte) {
+    if (texte.length > 30) {
+        return texte.substring(0, 30) + "...";
+    }
+    return texte;
+}
+
+
 // CORRECTION ICI : Ajout du 'async' devant la fonction
-async function updateData(nomDuJeu, name, element){
+async function updateData(nomDuJeu, name){
     try {
         // CORRECTION ICI : Pas de .json(), la réponse arrive déjà sous forme d'objet propre
-        const data = await window.api.getGameData(nomDuJeu, name);
+        const data = await window.api.getGameData(nomDuJeu, normaliserNomJeu(name));
         
+
         if (data && data.success) {
+            // alert(data.mainImage)
             // Sélection sécurisée des éléments pour injecter le texte textuel récupéré par Cheerio
-            const sizeSpan = element.parentElement.querySelector('.gameData .size span');
-            const versionSpan = element.parentElement.querySelector('.gameData .version span');
-            
-            if (sizeSpan) sizeSpan.innerHTML = data.gameSize || "Inconnu";
-            if (versionSpan) versionSpan.innerHTML = data.version || "Inconnu";
+            document.getElementById('copyID').onclick = function() {
+                copygamename(`${normaliserNomJeu(name)}`)
+            }
+            document.getElementById('game-size').innerHTML = data.gameSize || "/.";
+            document.getElementById('game-version').innerHTML = couperTexte(data.version) || "/.";
+            document.getElementById('game-server').innerHTML = couperTexte(data.servers.join(", ")) || "/.";
+            document.getElementById('pv').style.backgroundImage = `url('${data.mainImage}')` || "";
+            document.getElementById('pv1').style.backgroundImage = `url('${data.previews[0]}')` || "";
+            document.getElementById('pv2').style.backgroundImage = `url('${data.previews[1]}')` || "";
+            document.getElementById('game-id').innerHTML = couperTexte(normaliserNomJeu(name));
+            document.getElementById('game-time').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock8-icon lucide-clock-8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l-4 2"/></svg>${formaterTemps(data.playTime)}`
         } else {
             console.error("Le scraping a échoué :", data.error);
         }
@@ -248,8 +282,80 @@ async function updateData(nomDuJeu, name, element){
     }
 }
 
-async function uninstall(nomDuJeu, element) {
+async function copygamename(id) {
+    // alert(id)
+    await window.api.copyID(id);
+    document.getElementById('copyID').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-icon lucide-check"><path d="M20 6 9 17l-5-5"/></svg>`
+    setTimeout(()=>{
+        document.getElementById('copyID').innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy-icon lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+    },1000)
+}
+
+function gameSelected(url, name, game) { 
+    document.getElementById('uninstallbtn').onclick = function() {
+        // alert(normaliserNomJeu(name))
+        uninstall(normaliserNomJeu(name))
+    }
+    document.getElementById('startbtn').onclick = function() {
+        // alert(normaliserNomJeu(name))
+        window.api.startGame(normaliserNomJeu(name));
+    }
+    document.getElementById('stopdownloadbtn').onclick = function() {
+        // alert(normaliserNomJeu(name))
+        closegame()
+        window.api.stopDownload(normaliserNomJeu(name));
+    }
+    document.getElementById('downloadbtn').onclick = function() {
+        // alert(normaliserNomJeu(name))
+        const gameName = normaliserNomJeu(name)
+        // alert(document.getElementById(gameName).dataset.gameurl)
+        closegame()
+        window.api.envoyerMessage(document.getElementById(gameName).dataset.gameurl, gameName);
+    }
+    // alert(document.getElementById(normaliserNomJeu(name)).getAttribute('name'))
+    if ( document.getElementById(normaliserNomJeu(name)).getAttribute('name') == "downloaded" ) {
+        document.getElementById('uninstallbtn').style.display = "inline-flex"
+        document.getElementById('startbtn').style.display = "inline-flex"
+        document.getElementById('downloadbtn').style.display = "none"
+        document.getElementById('stopdownloadbtn').style.display = "none"
+    } else if ( document.getElementById(normaliserNomJeu(name)).getAttribute('name') == "downloading" ) {
+        document.getElementById('uninstallbtn').style.display = "none"
+        document.getElementById('startbtn').style.display = "none"
+        document.getElementById('downloadbtn').style.display = "none"
+        document.getElementById('stopdownloadbtn').style.display = "inline-flex"
+    } else {
+        document.getElementById('uninstallbtn').style.display = "none"
+        document.getElementById('startbtn').style.display = "none"
+        document.getElementById('downloadbtn').style.display = "inline-flex"
+        document.getElementById('stopdownloadbtn').style.display = "none"
+    }
+    document.getElementById('game-info').style.pointerEvents = "all";
+            document.getElementById('game-info').style.opacity = 1;
+    updateData(url, name)
+    // .getElementsByClassName("background-container")[0]
+    // game.style.scale = "1.56 1.05";
+    // game.getElementsByClassName("background-container")[0].style.scale = "0.64 0.95";
+} 
+
+function closegame(){
+    
+    document.getElementById('game-info').style.opacity = 0;
+    setTimeout(()=>{
+        document.getElementById('game-size').innerHTML = "/.";
+        document.getElementById('game-version').innerHTML = "/.";
+        document.getElementById('game-server').innerHTML = "/.";
+        document.getElementById('pv').style.backgroundImage = "";
+        document.getElementById('pv1').style.backgroundImage = "";
+        document.getElementById('pv2').style.backgroundImage = "";
+        document.getElementById('game-id').innerHTML = "";
+        document.getElementById('game-info').style.pointerEvents = "none";
+    },400)
+}
+
+
+async function uninstall(nomDuJeu, element = null) {
     window.api.uninstallGame(nomDuJeu);
+    closegame()
     element.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="loadingsvg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-circle-icon lucide-loader-circle"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`
 }
 
@@ -260,6 +366,10 @@ async function play(nomDuJeu, element) {
 async function stopDownload(nomDuJeu, element) {
     window.api.stopDownload(nomDuJeu);
 }
+
+// async function copyID(id) {
+//     clipboard.writeText(id);
+// }
 
 
 
@@ -290,12 +400,6 @@ window.electronAPI.onGameStatus((event, data) => {
         document.getElementById(`${data.nomJeu}_ingame_scale`).style.scale = "";
     }
 });
-
-function gameSelected(game) { 
-    // .getElementsByClassName("background-container")[0]
-    // game.style.scale = "1.56 1.05";
-    // game.getElementsByClassName("background-container")[0].style.scale = "0.64 0.95";
-} 
 
 window.electronAPI.onUpdateAvailable(() => {
     alert("Une nouvelle version est disponible ! Elle va être téléchargée en arrière-plan.");
@@ -344,7 +448,9 @@ const fileAttenteJeux = [];
 
 // Dès qu'un jeu arrive, on le pousse simplement dans la liste d'attente
 window.electronAPI.onNouveauJeu((gameObj) => {
-    fileAttenteJeux.push(gameObj);
+    if (Math.random() < 0.125) {
+        fileAttenteJeux.push(gameObj);
+    }
 });
 
 // Toutes les 200ms, si la liste n'est pas vide, on pop le premier jeu et on l'anime
