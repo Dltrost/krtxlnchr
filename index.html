@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Kortex Launcher</title>
@@ -10,34 +10,43 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        /* OBLIGATOIRE : On dit à Chromium de ne rien dessiner en fond */
-        background: transparent !important; 
-        font-family: Arial, sans-serif;
+        
+        background: transparent !important;
+        font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
     .app-back {
         position: absolute;
         width: 100%;
         height: 100%;
-        border-radius: 13px;
-        /* -webkit-clip-path: inset(0 round 13px); */
-        background: linear-gradient(0deg, #0A1710, #223F33); 
-        box-shadow: inset 0 0 0 1px #1D3029;
-    
-         /* Un léger contour pour donner l'effet "vitre" */
-          /* border: 1px solid rgba(255, 255, 255, 0.1); */
+        border-radius: 8px;
+        
+        background: #14110D;
+        box-shadow: inset 0 0 0 1px #2A241C;
+
+         
+          
     }
 
-    /* Cette barre remplace la barre du haut et permet de glisser la fenêtre */
+    
     .title-bar {
-      -webkit-app-region: drag; /* Permet de déplacer la fenêtre */
-      height: 55px;
-      background-color: transparent;
+      -webkit-app-region: drag; 
+      position: absolute;
+      height: 51px;
+      
+      width: 100%;
+      background-color: #15151500;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 15px;
+      padding: 0;
       color: white;
+      border-radius: 0;
+      box-sizing: border-box;
+    }
+
+    .title-bar * {
+      -webkit-app-region: no-drag;
     }
 
 
@@ -47,6 +56,9 @@
 
   </style>
 </head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap">
 <link rel="stylesheet" href="style.css">
 <body>
 
@@ -55,6 +67,8 @@
     <div id="game-info">
         <div class="backgroundBlur"></div>
         <div class="game-info">
+            
+            
             <div class="image-background" id="pv">
                 <div class="closepage" onclick="closegame()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
                 <div id="game-time"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock8-icon lucide-clock-8"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l-4 2"/></svg>0h</div>
@@ -78,182 +92,368 @@
         </div>
     </div>
 
-    <!-- <video src="./sources/intro.mp4" autoplay style="width: 70%; height: auto; position: absolute; left: 50%; top: 50%; transform: translateX(-50%) translateY(-50%);"></video> -->
+    
   <div id="app-content">
-    <div class="applogo"></div>
-    <div class="internetSpeed"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wifi-icon lucide-wifi"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg><span id="internetSpeed">/.</span></div>
-    <div class="buttons">
-        <button class="selectedMenu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gamepad2-icon lucide-gamepad-2"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></svg></button>
-        <button style="opacity: 0.5;pointer-events: none;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chart-no-axes-column-icon lucide-chart-no-axes-column"><path d="M5 21v-6"/><path d="M12 21V3"/><path d="M19 21V9"/></svg></button>
-        <button style="opacity: 0.5;pointer-events: none;"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users-round-icon lucide-users-round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg></button>
-        <button style="opacity: 0.5;pointer-events: none;" class="settingsButton"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-icon lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></button>
-        <!-- <button></button> -->
+    <div class="left-container">
+        <div class="applogo"></div>
+        <nav class="sidebar-nav">
+            <button class="sidebar-nav-btn is-active" id="nav-library" onclick="setPage('library')" title="Library" aria-label="Library" data-i18n-title="nav.library" data-i18n-aria="nav.library">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>
+            </button>
+            <button class="sidebar-nav-btn" id="nav-downloads" onclick="setPage('downloads')" title="Downloads" aria-label="Downloads" data-i18n-title="nav.downloads" data-i18n-aria="nav.downloads">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+                <span class="sidebar-nav-badge" id="downloadsBadge" hidden>0</span>
+            </button>
+            <button class="sidebar-nav-btn" id="nav-stats" onclick="setPage('stats')" title="Stats" aria-label="Stats" data-i18n-title="nav.stats" data-i18n-aria="nav.stats">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16l4-6 4 3 5-8"/></svg>
+            </button>
+            <button class="sidebar-nav-btn sidebar-nav-btn-bottom" id="kofi" onclick="openkofi(`https://ko-fi.com/minzudev`)">
+                <div class="kofilogo"></div>
+            </button>
+            <button class="sidebar-nav-btn sidebar-nav-btn-bottom" id="nav-settings" onclick="setPage('settings')" title="Settings" aria-label="Settings" data-i18n-title="nav.settings" data-i18n-aria="nav.settings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </nav>
     </div>
-    <div class="backgroundapp2"></div>
-    <div class="backgroundapp"></div>
-    <div class="title-bar">
-    <div class="search-wrap" id="search-wrap">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search-icon lucide-search"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
-      <input id="search" class="search-input" placeholder="Rechercher un jeu..." />
-      <div class="raccourics"></div>
-    </div>
-    <button class="close-btn" onclick="window.close()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x-icon lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
-    <button class="minimize-btn" onclick="window.electronAPI.minimize();"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus-icon lucide-minus"><path d="M5 12h14"/></svg></button>
-    <button class="update-btn" onclick="updateGame(this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-ccw-icon lucide-refresh-ccw"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>Update Games</button>
-    <button class="folder-btn" onclick="window.electronAPI.openFolder()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders-icon lucide-folders"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"/><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"/></svg></button>
-  </div>
 
-  <div id="catalogue-container">
-    <div class="game-container" id="catalogue">
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <div class="gameData">
-          <p class="size">Size: <span>26.3GB</span></p>
-          <p class="version">n°: <span>Build 23340805</span></p>
+    <div class="main-container">
+        <div id="catalogue-container">
+          <div id="library-header-container"></div>
+            <div class="gamecontcont">
+                <div class="game-container" id="catalogue"></div>
+            </div>
         </div>
-        <!-- <button onclick="downloadgame('','',this)"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
 
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-    <div class="game-inner-box">
-        
-        <div class="background-container"><div class="background" style="background-color: rgb(39, 39, 39);"></div></div>
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download-icon lucide-download"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button> -->
-        <!-- <button><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play-icon lucide-play"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg></button> -->
-        <!-- <div class="gradient"></div> -->
-    </div>
-  </div>
+        <div id="downloads-container" style="display: none;">
+            <div class="downloads-header">
+                <span class="downloads-title" data-i18n="downloads.title">Downloads</span>
+            </div>
+            <div class="downloads-body">
 
-  </div>
-  </div>
+                <div class="downloads-chart-card">
+                    <div class="downloads-chart-headline">
+                        <span class="downloads-chart-label" data-i18n="downloads.speedLabel">Download speed</span>
+                        <span class="downloads-chart-value" id="chartCurrentSpeed" data-i18n="downloads.idle">Idle</span>
+                    </div>
 
-  <div id="update-content">
-      <div class="contentloading">
-        <span class="loadingsvg"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-circle-icon lucide-loader-circle"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span>
-        <span class="loadingTexte">Searching new games</span>
-        <span id="loadingpourcentage">0%</span>
+                    <div class="downloads-chart-svg-wrap">
+                        <svg id="downloadsChartSvg" viewBox="0 0 600 130" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="downloadsChartGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" class="downloads-chart-stop-start"></stop>
+                                    <stop offset="100%" class="downloads-chart-stop-end"></stop>
+                                </linearGradient>
+                            </defs>
+                            <line class="downloads-chart-baseline" x1="0" y1="122" x2="600" y2="122"></line>
+                            <path id="downloadsChartArea" class="downloads-chart-area" d=""></path>
+                            <path id="downloadsChartLine" class="downloads-chart-line" d=""></path>
+                        </svg>
+                    </div>
+
+                    <div class="downloads-chart-stats">
+                        <div class="downloads-chart-stat">
+                            <span class="downloads-chart-stat-value" id="chartPeakSpeed">0.0 MB/s</span>
+                            <span class="downloads-chart-stat-label" data-i18n="downloads.peak">Peak this session</span>
+                        </div>
+                        <div class="downloads-chart-stat">
+                            <span class="downloads-chart-stat-value" id="chartActiveCount">0</span>
+                            <span class="downloads-chart-stat-label" data-i18n="downloads.active">Active downloads</span>
+                        </div>
+                        <div class="downloads-chart-stat">
+                            <span class="downloads-chart-stat-value" id="chartInProgress">0 MB</span>
+                            <span class="downloads-chart-stat-label" data-i18n="downloads.transferring">Currently transferring</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="downloads-empty" id="downloadsEmpty">
+                    <strong data-i18n="downloads.empty.title">No active downloads</strong>
+                    <span data-i18n="downloads.empty.desc">Downloads you start from the library will show up here.</span>
+                </div>
+                <div class="downloads-list" id="downloadsList"></div>
+            </div>
+        </div>
+
+        <div id="stats-container" style="display: none;">
+            <div class="stats-header">
+                <span class="stats-title" data-i18n="stats.title">Stats</span>
+            </div>
+            <div class="stats-body">
+                <div class="stats-summary-row">
+                    <div class="stats-summary-card">
+                        <span class="stats-summary-value" id="statsTotalTime">—</span>
+                        <span class="stats-summary-label" data-i18n="stats.totalPlaytime">total playtime</span>
+                    </div>
+                    <div class="stats-summary-card">
+                        <span class="stats-summary-value" id="statsInstalledCount">—</span>
+                        <span class="stats-summary-label" data-i18n="stats.installed">games installed</span>
+                    </div>
+                    <div class="stats-summary-card">
+                        <span class="stats-summary-value" id="statsCatalogCount">—</span>
+                        <span class="stats-summary-label" data-i18n="stats.inCatalog">games in catalog</span>
+                    </div>
+                </div>
+
+                <div class="stats-leaderboard">
+                    <span class="settings-section-title" data-i18n="stats.mostPlayed">Most played</span>
+                    <div class="stats-leaderboard-list" id="statsLeaderboard">
+                        <div class="stats-empty" id="statsEmpty">
+                            <strong data-i18n="stats.empty.title">No playtime yet</strong>
+                            <span data-i18n="stats.empty.desc">Launch a game from your library to start tracking stats.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-container" style="display: none;">
+            <div class="settings-header">
+                <span class="settings-title" data-i18n="settings.title">Settings</span>
+            </div>
+            <div class="settings-body">
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.discord.title">Discord Rich Presence</span>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.discord.label">Show activity on Discord</span>
+                            <span class="settings-row-desc" data-i18n="settings.discord.desc">Displays the Kortex logo, the game you're playing, and your library stats on your Discord profile.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="discordEnabled" checked />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.language.title">Language</span>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.language.label">App language</span>
+                            <span class="settings-row-desc" data-i18n="settings.language.desc">Changes the language used across Kortex.</span>
+                        </div>
+                        <div class="settings-segmented" id="languageSegmented">
+                            <span class="settings-segmented-thumb"></span>
+                            <button type="button" class="settings-segmented-btn is-selected" data-value="en">English</button>
+                            <button type="button" class="settings-segmented-btn" data-value="fr">Français</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.appearance.title">Appearance</span>
+
+                    <div class="settings-row settings-row-swatches">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.appearance.label">Accent color</span>
+                            <span class="settings-row-desc" data-i18n="settings.appearance.desc">Changes the highlight color used across the app.</span>
+                        </div>
+                        <div class="settings-swatch-group" id="accentSwatches">
+                            <button type="button" class="settings-swatch is-selected" data-color="terracotta" style="--swatch-color:#C1704A;" title="Terracotta" aria-label="Terracotta"></button>
+                            <button type="button" class="settings-swatch" data-color="sage" style="--swatch-color:#7A9B6E;" title="Sage" aria-label="Sage"></button>
+                            <button type="button" class="settings-swatch" data-color="dustyblue" style="--swatch-color:#6E8CA0;" title="Dusty blue" aria-label="Dusty blue"></button>
+                            <button type="button" class="settings-swatch" data-color="gold" style="--swatch-color:#C9A24B;" title="Gold" aria-label="Gold"></button>
+                            <button type="button" class="settings-swatch" data-color="rose" style="--swatch-color:#B5707D;" title="Rose" aria-label="Rose"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.library.title">Library</span>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.library.view.label">Default view</span>
+                            <span class="settings-row-desc" data-i18n="settings.library.view.desc">Which layout the library opens with.</span>
+                        </div>
+                        <div class="settings-segmented" id="defaultViewSegmented">
+                            <span class="settings-segmented-thumb"></span>
+                            <button type="button" class="settings-segmented-btn is-selected" data-value="grid" data-i18n="settings.library.view.grid">Grid</button>
+                            <button type="button" class="settings-segmented-btn" data-value="list" data-i18n="settings.library.view.list">List</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.library.sort.label">Sort library alphabetically</span>
+                            <span class="settings-row-desc" data-i18n="settings.library.sort.desc">Show games from A to Z instead of installed-first.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="sortByName" />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.catalogue.title">Game catalogue</span>
+
+                    <div class="settings-stat-card">
+                        <div class="settings-stat-top">
+                            <div class="settings-stat-main">
+                                <span class="settings-stat-value" id="catalogueCount">—</span>
+                                <span class="settings-stat-label"><span data-i18n="settings.catalogue.stat">games available · last updated</span> <span id="catalogueLastUpdate" data-i18n="settings.catalogue.never">never</span></span>
+                            </div>
+                            <button type="button" class="settings-action-btn" id="updateCatalogueBtn" onclick="lancerMiseAJourCatalogue()" data-i18n="settings.catalogue.updateNow">Update now</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.catalogue.startup.label">Update catalogue on startup</span>
+                            <span class="settings-row-desc" data-i18n="settings.catalogue.startup.desc">Refresh the game list automatically each time Kortex launches.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="updateCatalogueAtStartup" checked />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.behavior.title">Behavior</span>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.behavior.startup.label">Launch Kortex at startup</span>
+                            <span class="settings-row-desc" data-i18n="settings.behavior.startup.desc">Start Kortex automatically when you log into Windows.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="launchAtStartup" />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.behavior.tray.label">Minimize to the system tray</span>
+                            <span class="settings-row-desc" data-i18n="settings.behavior.tray.desc">Closing the window keeps Kortex running in the background.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="minimizeToTray" />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.behavior.openFolder.label">Open game folder after install</span>
+                            <span class="settings-row-desc" data-i18n="settings.behavior.openFolder.desc">Automatically reveal a game's folder once it finishes downloading.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="autoOpenFolderAfterInstall" />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.behavior.notify.label">Notify when a download finishes</span>
+                            <span class="settings-row-desc" data-i18n="settings.behavior.notify.desc">Show a system notification once a game is ready to play.</span>
+                        </div>
+                        <label class="settings-switch">
+                            <input type="checkbox" id="notifyOnDownloadComplete" checked />
+                            <span class="settings-switch-track"><span class="settings-switch-thumb"></span></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.storage.title">Storage</span>
+
+                    <div class="settings-stat-card">
+                        <div class="settings-stat-top">
+                            <div class="settings-stat-main">
+                                <span class="settings-stat-value" id="storageValue">—</span>
+                                <span class="settings-stat-label"><span data-i18n="settings.storage.usedBy">used by</span> <span id="storageCount">0</span> <span data-i18n="settings.storage.installedGames">installed games</span></span>
+                            </div>
+                            <button type="button" class="settings-action-btn" onclick="window.electronAPI.openFolder()" data-i18n="settings.storage.openFolder">Open folder</button>
+                        </div>
+
+                        <div class="settings-storage-bar" id="storageBar">
+                            <span class="settings-storage-segment settings-storage-seg-games" id="segGames"></span>
+                            <span class="settings-storage-segment settings-storage-seg-other" id="segOther"></span>
+                            <span class="settings-storage-segment settings-storage-seg-free" id="segFree"></span>
+                        </div>
+
+                        <div class="settings-storage-legend">
+                            <div class="settings-storage-legend-item">
+                                <span class="settings-storage-dot settings-storage-dot-games"></span>
+                                <span data-i18n="settings.storage.games">Kortex games</span>
+                                <span class="settings-storage-legend-value" id="legendGames">—</span>
+                            </div>
+                            <div class="settings-storage-legend-item">
+                                <span class="settings-storage-dot settings-storage-dot-other"></span>
+                                <span data-i18n="settings.storage.other">Other</span>
+                                <span class="settings-storage-legend-value" id="legendOther">—</span>
+                            </div>
+                            <div class="settings-storage-legend-item">
+                                <span class="settings-storage-dot settings-storage-dot-free"></span>
+                                <span data-i18n="settings.storage.free">Free</span>
+                                <span class="settings-storage-legend-value" id="legendFree">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <span class="settings-section-title" data-i18n="settings.updates.title">Updates</span>
+
+                    <div class="settings-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label">Kortex <span id="appVersionLabel">—</span></span>
+                            <span class="settings-row-desc" id="updateStatusLabel" data-i18n="settings.updates.desc">Check if a newer version is available.</span>
+                        </div>
+                        <button type="button" class="settings-action-btn" id="checkUpdatesBtn" onclick="verifierMisesAJour()" data-i18n="settings.updates.checkBtn">Check for updates</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <div class="settings-danger-row">
+                        <div class="settings-row-text">
+                            <span class="settings-row-label" data-i18n="settings.reset.label">Reset all settings</span>
+                            <span class="settings-row-desc" data-i18n="settings.reset.desc">Restores every option on this page to its default value.</span>
+                        </div>
+                        <button type="button" class="settings-danger-btn" onclick="reinitialiserParametres()" data-i18n="settings.reset.btn">Reset</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+
+    
+    
+    
+    
+    <div class="title-bar">
+      <div class="search-wrap" id="search-wrap">
+        <input id="search" class="search-input" aria-label="Search a game" placeholder="Search a game..." data-i18n-aria="search.placeholder" data-i18n-placeholder="search.placeholder" />
+        <div class="raccourics" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>command-bold</title><g fill="currentColor"><path d="M16 8.00002L19 8.00049C20.6569 8.00075 22.0002 6.65781 22.0005 5.00096C22.0007 3.34411 20.6578 2.00075 19.0009 2.00049C17.3441 2.00023 16.0007 3.34316 16.0005 5.00002L16 8.00002L8.00047 8L8 5.00002C7.99974 3.34316 6.65638 2.00023 4.99953 2.00049C3.34267 2.00075 1.99974 3.34411 2 5.00096C2.00026 6.65781 3.34362 8.00075 5.00047 8.00049L8.00047 8L8 16H16V8.00002Z"/><path d="M16 16L19 16.0005C20.6569 16.0002 22.0002 17.3432 22.0005 19C22.0007 20.6569 20.6578 22.0002 19.0009 22.0005C17.3441 22.0007 16.0007 20.6578 16.0005 19.001L16 16Z"/><path d="M5.00047 16.0005L8.00047 16.001L8 19.001C7.99974 20.6578 6.65638 22.0007 4.99953 22.0005C3.34267 22.0002 1.99974 20.6569 2 19C2.00026 17.3432 3.34362 16.0002 5.00047 16.0005Z"/></g></svg></div>
       </div>
+        <button class="folder-btn" onclick="window.electronAPI.openFolder()" title="Open games folder" aria-label="Open games folder" data-i18n-title="folder.open" data-i18n-aria="folder.open"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders-icon lucide-folders"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"/><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"/></svg></button>
+        <div class="window-caption-buttons">
+            <button class="caption-btn minimize-btn" onclick="window.electronAPI.minimize();" title="Minimize" aria-label="Minimize" data-i18n-title="caption.minimize" data-i18n-aria="caption.minimize"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="4.5" width="10" height="1" fill="currentColor"/></svg></button>
+            <button class="caption-btn maximize-btn" id="maximize-btn" onclick="window.electronAPI.toggleMaximize();" title="Maximize" aria-label="Maximize" data-i18n-title="caption.maximize" data-i18n-aria="caption.maximize"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg></button>
+            <button class="caption-btn close-btn" onclick="window.close()" title="Close" aria-label="Close" data-i18n-title="caption.close" data-i18n-aria="caption.close"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" stroke-width="1"/></svg></button>
+        </div>
+    </div>
+
+
   </div>
 
-  <!-- <div class="alert">
-    <div class="icon"></div>
-    <p>Téléchargement terminée</p>
-  </div> -->
+  <div id="toast-container" class="toast-container"></div>
+  </div>
 
+  
+
+  
+
+  <script src="i18n.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

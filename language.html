@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Kortex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Inter", sans-serif;
+      background: transparent;
+      color: #F2EDE5;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .language-shell {
+      -webkit-app-region: drag;
+      position: relative;
+      width: 420px;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      border-radius: 14px;
+      background: #151515;
+      border: 1px solid #353534;
+      box-shadow: inset 0 1px 0 rgba(255, 245, 235, 0.04), 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .language-title {
+      font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+      font-size: 19px;
+      font-weight: 600;
+      color: #F2EDE5;
+    }
+
+    .language-subtitle {
+      font-size: 12px;
+      color: #AFAEA5;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+
+    .language-options {
+      -webkit-app-region: no-drag;
+      display: flex;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .language-option {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 12px;
+      border-radius: 12px;
+      border: 1px solid #353534;
+      background: #1B1B1A;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    }
+
+    .language-option:hover {
+      border-color: #A8583A;
+      background: #201A16;
+      transform: translateY(-2px);
+    }
+
+    .language-flag {
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .language-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #F2EDE5;
+    }
+  </style>
+</head>
+<body>
+  <div class="language-shell">
+    <span class="language-title">Choose your language / Choisis ta langue</span>
+    <span class="language-subtitle">You can change this later in Settings.<br/>Tu pourras changer ça plus tard dans les Paramètres.</span>
+    <div class="language-options">
+      <div class="language-option" onclick="choisir('en')">
+        <span class="language-flag">🇬🇧</span>
+        <span class="language-name">English</span>
+      </div>
+      <div class="language-option" onclick="choisir('fr')">
+        <span class="language-flag">🇫🇷</span>
+        <span class="language-name">Français</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function choisir(langue) {
+      window.electronAPI.choisirLangue(langue);
+    }
+  </script>
+</body>
+</html>

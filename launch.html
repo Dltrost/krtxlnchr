@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kortex - Launching</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      font-family: "Inter", sans-serif;
+      background: transparent;
+      color: #F2EDE5;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .launch-shell {
+      -webkit-app-region: drag;
+      position: relative;
+      width: 440px;
+      height: 130px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #151515;
+      border: 1px solid #353534;
+      box-shadow: inset 0 1px 0 rgba(255, 245, 235, 0.04), 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .launch-thumb {
+      flex: 0 0 88px;
+      width: 88px;
+      height: 88px;
+      border-radius: 10px;
+      background-color: #20201F;
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+    }
+
+    .launch-info {
+      flex: 1 1 auto;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .launch-name {
+      font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+      font-size: 17px;
+      font-weight: 500;
+      color: #F2EDE5;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .launch-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #AFAEA5;
+    }
+
+    .launch-status.is-error {
+      color: #D98A72;
+    }
+
+    .launch-status-dot {
+      flex: 0 0 7px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #A8583A;
+      animation: pulse-dot 1.4s ease-in-out infinite;
+    }
+
+    .launch-status.is-error .launch-status-dot {
+      background: #C1523F;
+      animation: none;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 0.5; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .launch-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .launch-btn {
+      -webkit-app-region: no-drag;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-family: "Inter", sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .launch-close-btn {
+      border: 1px solid #4a3530;
+      background: transparent;
+      color: #D98A72;
+    }
+
+    .launch-close-btn:hover {
+      background: #C1523F;
+      border-color: #C1523F;
+      color: #FBF3EA;
+    }
+
+    .launch-steam-btn {
+      border: 1px solid #A8583A;
+      background: #A8583A;
+      color: #FBF3EA;
+    }
+
+    .launch-steam-btn:hover {
+      background: #C1704A;
+      border-color: #C1704A;
+    }
+
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="launch-shell">
+    <div class="launch-thumb" id="thumb"></div>
+    <div class="launch-info">
+      <span class="launch-name" id="gameName">Kortex</span>
+      <div class="launch-status" id="status">
+        <span class="launch-status-dot"></span>
+        <span id="statusText">Checking for Steam…</span>
+      </div>
+      <div class="launch-actions" id="actions" hidden>
+        <button class="launch-btn launch-steam-btn" id="steamBtn" onclick="lancerSteam()" hidden>Launch Steam</button>
+        <button class="launch-btn launch-close-btn" id="closeBtn" onclick="window.close()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function lancerSteam() {
+      const statusTextEl = document.getElementById('statusText');
+      if (window.electronAPI && window.electronAPI.launchSteam) {
+        window.electronAPI.launchSteam();
+      }
+      statusTextEl.textContent = 'Opening Steam…';
+    }
+
+    window.electronAPI.onLaunchState((data) => {
+      const gameNameEl = document.getElementById('gameName');
+      const thumbEl = document.getElementById('thumb');
+      const statusEl = document.getElementById('status');
+      const statusTextEl = document.getElementById('statusText');
+      const actionsEl = document.getElementById('actions');
+      const steamBtn = document.getElementById('steamBtn');
+
+      if (data.name) gameNameEl.textContent = data.name;
+      if (data.image) thumbEl.style.backgroundImage = `url('${data.image}')`;
+
+      statusTextEl.textContent = data.message || 'Launching…';
+
+      const enErreur = data.state === 'error' || data.state === 'steam-required';
+      statusEl.classList.toggle('is-error', enErreur);
+      actionsEl.hidden = !enErreur;
+      steamBtn.hidden = data.state !== 'steam-required';
+    });
+  </script>
+</body>
+</html>

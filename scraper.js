@@ -29,18 +29,15 @@ function loadBackupData() {
     return {};
 }
 
-// Ajout du paramètre maxRetries (par défaut 3)
 async function scrapeSinglePage(gotScraping, pageNumber, maxRetries = 3) {
     const url = pageNumber === 1 
         ? 'https://steamrip.com/top-games/' 
         : `https://steamrip.com/top-games/page/${pageNumber}/`;
 
-    // Boucle de tentatives
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const response = await gotScraping({ url, http2: true, timeout: { request: 15000 } });
             
-            // Si la page n'existe vraiment pas (404), on ne réessaie pas, on arrête pour cette page.
             if (response.statusCode === 404) return null;
 
             const $ = cheerio.load(response.body);
@@ -74,7 +71,6 @@ async function scrapeSinglePage(gotScraping, pageNumber, maxRetries = 3) {
                 results.push({ gameName, gameUrl, imageLink: imageLink || "Pas d'image" });
             });
 
-            // Si on arrive ici, le scraping a réussi, on retourne les résultats
             return { results };
 
         } catch (error) {
@@ -85,7 +81,6 @@ async function scrapeSinglePage(gotScraping, pageNumber, maxRetries = 3) {
                 return null;
             }
             
-            // On attend avant de réessayer (le délai augmente à chaque tentative : 2s, puis 4s...)
             const delay = 2000 * attempt;
             console.log(`⏳ Attente de ${delay/1000}s avant de réessayer la page ${pageNumber}...`);
             await new Promise(resolve => setTimeout(resolve, delay));
@@ -128,7 +123,6 @@ async function startScraping(onGameAdded, onProgressUpdate) {
                 }
             }
             
-            // Le catch ici sert uniquement de filet de sécurité final, scrapeSinglePage gère déjà ses erreurs.
             const groupResults = await Promise.all(
                 pageGroup.map(p => scrapeSinglePage(gotScraping, p).catch(() => null))
             );
