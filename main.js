@@ -3,6 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const { Client: DiscordRPCClient } = require('@xhayper/discord-rpc');
 
+process.on('unhandledRejection', (error) => {
+    console.error('⚠️ Promesse non gérée (évite un crash) :', error);
+});
+
 const dossierAppData = app.getPath('userData');
 const dossierDestination = path.join(dossierAppData, 'games');
 const dataPath = path.join(dossierAppData, 'data.json');
@@ -682,9 +686,27 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     let browser;
                     try {
                         console.log(`[INFO] Lancement de Playwright pour scraper Buzzheaver...`);
-                        browser = await chromium.launch({ headless: true, channel: 'chrome' });
-                        const context = await browser.newContext();
+                        browser = await chromium.launch({
+                            headless: true,
+                            channel: 'chrome',
+                            args: [
+                                '--disable-blink-features=AutomationControlled',
+                                '--disable-features=IsolateOrigins,site-per-process',
+                                `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36`
+                            ]
+                        });
+                        const context = await browser.newContext({
+                            viewport: { width: 1920, height: 1080 },
+                            locale: 'en-US',
+                            timezoneId: 'America/New_York'
+                        });
                         const page = await context.newPage();
+
+                        await page.addInitScript(() => {
+                            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+                            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                        });
 
                         await page.goto(urlRecue, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
@@ -723,7 +745,7 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     let browser;
                     try {
                         console.log(`[INFO] Lancement de Playwright pour scraper MegaDB...`);
-                        browser = await chromium.launch({ 
+                        browser = await chromium.launch({
                             headless: true,
                             channel: 'chrome',
                             args: [
@@ -749,12 +771,13 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
                         });
 
+                        let timeoutMegaDB;
                         const linkPromise = new Promise((resolve, reject) => {
-                            const timeout = setTimeout(() => reject(new Error('Timeout API MegaDB')), 60000);
+                            timeoutMegaDB = setTimeout(() => reject(new Error('Timeout API MegaDB')), 60000);
 
                             context.on('download', async (download) => {
                                 const dlUrl = download.url();
-                                clearTimeout(timeout);
+                                clearTimeout(timeoutMegaDB);
                                 try { await download.cancel(); } catch (err) {}
                                 resolve(dlUrl);
                             });
@@ -762,11 +785,12 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                             page.on('request', (request) => {
                                 const reqUrl = request.url();
                                 if (reqUrl.includes(':8080/d/') || reqUrl.match(/\.(rar|zip|7z)$/i)) {
-                                    clearTimeout(timeout);
+                                    clearTimeout(timeoutMegaDB);
                                     resolve(reqUrl);
                                 }
                             });
                         });
+                        linkPromise.catch(() => {});
 
                         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
                         await new Promise(r => setTimeout(r, 11000));
@@ -785,6 +809,7 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     } catch (err) {
                         console.error(`[ERREUR] MegaDB ignoré :`, err.message);
                     } finally {
+                        clearTimeout(timeoutMegaDB);
                         if (browser) await browser.close();
                     }
 
@@ -792,13 +817,36 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     let browser;
                     try {
                         console.log(`[INFO] Lancement de Playwright pour scraper Gofile...`);
-                        browser = await chromium.launch({ headless: true, channel: 'chrome' });
-                        const page = await browser.newPage();
+                        browser = await chromium.launch({
+                            headless: false,
+                            channel: 'chrome',
+                            args: [
+                                '--disable-blink-features=AutomationControlled',
+                                '--disable-features=IsolateOrigins,site-per-process',
+                                `--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36`
+                            ]
+                        });
+                        const context = await browser.newContext({
+                            viewport: { width: 1920, height: 1080 },
+                            locale: 'en-US',
+                            timezoneId: 'America/New_York'
+                        });
+                        const page = await context.newPage();
+
+                        await page.addInitScript(() => {
+                            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+                            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+                            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+                        });
 
                         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-                        const boutonProprietes = page.locator('button[data-action="properties"]');
-                        await boutonProprietes.waitFor({ state: 'visible', timeout: 15000 });
+                        const boutonMenu = page.locator('button[data-action="item-menu"]');
+                        await boutonMenu.waitFor({ state: 'visible', timeout: 15000 });
+                        await boutonMenu.click();
+
+                        const boutonProprietes = page.getByRole('menuitem', { name: 'Properties' });
+                        await boutonProprietes.waitFor({ state: 'visible', timeout: 10000 });
                         await boutonProprietes.click();
 
                         await page.waitForFunction(() => {
