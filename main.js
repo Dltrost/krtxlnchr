@@ -1630,8 +1630,14 @@ ipcMain.handle('getGameData', async (event, urlRecue, nom) => {
         let mainImage = null;
         let previews = [];
 
-        const contenuBrut = fs.readFileSync(dataPath, 'utf-8');
-        donneesParties = JSON.parse(contenuBrut);
+        let donneesParties = {};
+        if (fs.existsSync(dataPath)) {
+            try {
+                donneesParties = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+            } catch (e) {
+                console.error('Erreur de lecture de data.json :', e.message);
+            }
+        }
 
         const getAbsoluteUrl = (path) => {
             if (!path) return null;
