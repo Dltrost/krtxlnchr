@@ -818,7 +818,7 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     try {
                         console.log(`[INFO] Lancement de Playwright pour scraper Gofile...`);
                         browser = await chromium.launch({
-                            headless: false,
+                            headless: true,
                             channel: 'chrome',
                             args: [
                                 '--disable-blink-features=AutomationControlled',
@@ -841,13 +841,22 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
 
                         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-                        const boutonMenu = page.locator('button[data-action="item-menu"]');
-                        await boutonMenu.waitFor({ state: 'visible', timeout: 15000 });
-                        await boutonMenu.click();
+                        const boutonProprietesDirect = page.locator('button[data-action="properties"]');
+                        const boutonProprietesVisibleDirect = await boutonProprietesDirect.first().isVisible().catch(() => false);
 
-                        const boutonProprietes = page.getByRole('menuitem', { name: 'Properties' });
-                        await boutonProprietes.waitFor({ state: 'visible', timeout: 10000 });
-                        await boutonProprietes.click();
+                        if (boutonProprietesVisibleDirect) {
+                            console.log('[INFO] Gofile : ancien format détecté, clic direct sur Properties.');
+                            await boutonProprietesDirect.first().click();
+                        } else {
+                            console.log('[INFO] Gofile : nouveau format détecté, passage par le menu.');
+                            const boutonMenu = page.locator('button[data-action="item-menu"]');
+                            await boutonMenu.waitFor({ state: 'visible', timeout: 15000 });
+                            await boutonMenu.click();
+
+                            const boutonProprietes = page.getByRole('menuitem', { name: 'Properties' });
+                            await boutonProprietes.waitFor({ state: 'visible', timeout: 10000 });
+                            await boutonProprietes.click();
+                        }
 
                         await page.waitForFunction(() => {
                             return Array.from(document.querySelectorAll('.divide-y span.shrink-0'))
@@ -866,7 +875,7 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
 
                         const nomFichier = proprietes['Name'];
                         const idFichier = proprietes['ID'];
-                        const storedOn = proprietes['Stored on'];
+                        const storedOn = proprietes['Stored on']?.split(',')[0]?.trim();
 
                         if (nomFichier && idFichier && storedOn) {
                             const pageCookies = await page.context().cookies();
@@ -891,11 +900,12 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
 
         async function validerLien(link, cookies = "") {
             try {
-                const reqHeaders = { ...baseHeaders, 'Range': 'bytes=0-100' };
+                const reqHeaders = { ...baseHeaders };
                 if (cookies) reqHeaders['Cookie'] = cookies;
 
                 const pingRes = await gotScraping({
                     url: link,
+                    method: 'HEAD',
                     headers: reqHeaders,
                     timeout: { request: 5000 },
                     throwHttpErrors: false,
@@ -952,18 +962,19 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                 try {
                     const pingRes = await gotScraping({
                         url: lienChoisi,
-                        headers: { ...baseHeaders, 'Range': 'bytes=0-0' },
+                        method: 'HEAD',
+                        headers: baseHeaders,
                         http2: false,
                         throwHttpErrors: false,
                         timeout: { request: 10000 }
                     });
 
-                    if (pingRes.statusCode === 206 && pingRes.headers['content-range']) {
+                    totalOctets = parseInt(pingRes.headers['content-length'] || 0, 10);
+
+                    if (pingRes.statusCode === 200 && /bytes/i.test(pingRes.headers['accept-ranges'] || '')) {
                         supporteChunks = true;
-                        totalOctets = parseInt(pingRes.headers['content-range'].split('/')[1], 10);
                         console.log(`[INFO] Multi-connexion supporté ! Taille : ${(totalOctets / (1024 * 1024)).toFixed(2)} Mo`);
                     } else {
-                        totalOctets = parseInt(pingRes.headers['content-length'] || 0, 10);
                         console.log(`[INFO] Multi-connexion refusé. Passage en mode classique.`);
                     }
                 } catch (error) {
@@ -1129,7 +1140,24 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
                     telechargementsActifs[nomSecurise] = { stream, writeStream, controller: downloadController, cheminFichier: cheminComplet, progressInterval };
 
                     await new Promise((resolve, reject) => {
+                        let reponseInvalide = false;
+                        let corpsErreur = Buffer.alloc(0);
+
+                        stream.on('response', (response) => {
+                            const contentType = response.headers['content-type'] || '';
+                            console.log(`[DEBUG] Réponse du serveur de téléchargement : ${response.statusCode} | content-length: ${response.headers['content-length'] || 'absent'} | content-type: ${contentType || 'absent'}`);
+
+                            if (response.statusCode < 200 || response.statusCode >= 300 || /text\/html|application\/json/i.test(contentType)) {
+                                reponseInvalide = true;
+                            }
+                        });
+
                         stream.on('data', (chunk) => {
+                            if (reponseInvalide) {
+                                if (corpsErreur.length < 2000) corpsErreur = Buffer.concat([corpsErreur, chunk]);
+                                if (corpsErreur.length >= 2000) stream.destroy();
+                                return;
+                            }
                             telecharges += chunk.length;
                             const readyForMore = writeStream.write(chunk);
                             if (!readyForMore) stream.pause();
@@ -1137,7 +1165,16 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
 
                         writeStream.on('drain', () => { stream.resume(); });
                         stream.on('end', () => { writeStream.end(); });
-                        writeStream.on('finish', () => { resolve(); });
+                        stream.on('close', () => {
+                            if (reponseInvalide) {
+                                console.error(`[DEBUG] Contenu renvoyé par le serveur au lieu du fichier :\n${corpsErreur.toString('utf-8').slice(0, 2000)}`);
+                                writeStream.end();
+                                reject(new Error('Le serveur a renvoyé une page invalide au lieu du fichier.'));
+                            }
+                        });
+                        writeStream.on('finish', () => {
+                            if (!reponseInvalide) resolve();
+                        });
                         stream.on('error', (err) => { writeStream.end(); reject(err); });
                         writeStream.on('error', (err) => { reject(err); });
                     });
@@ -1147,6 +1184,12 @@ ipcMain.handle('canal-securise', async (event, urlRecue, nomJeu) => {
 
                 delete telechargementsActifs[nomSecurise];
                 console.log(`[SUCCÈS] Téléchargement de ${nomSecurise} terminé !`);
+
+                const tailleFichierFinal = fs.existsSync(cheminComplet) ? fs.statSync(cheminComplet).size : 0;
+                const tailleMinimumAcceptable = totalOctets > 0 ? totalOctets * 0.98 : 1024 * 1024;
+                if (tailleFichierFinal < tailleMinimumAcceptable) {
+                    throw new Error(`Téléchargement incomplet ou invalide (${(tailleFichierFinal / (1024 * 1024)).toFixed(1)} Mo reçus${totalOctets > 0 ? ` sur ${(totalOctets / (1024 * 1024)).toFixed(1)} Mo attendus` : ''}).`);
+                }
 
                 console.log(`\n[ÉTAPE 5] Début de l'extraction de : ${nomFichierFinal}`);
 
